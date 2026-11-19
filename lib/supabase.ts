@@ -1,15 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
-export type BookingStatus =
-  | "awaiting_payment"
-  | "payment_review"
-  | "confirmed"
-  | "checked_in"
-  | "completed"
-  | "expired"
-  | "rejected"
-  | "cancelled"
-  | "no_show";
+import type { BookingStatus, StayKind } from "./rules.ts";
 
 export type Camp = {
   id: number;
@@ -57,7 +47,7 @@ export type Booking = {
   id: string;
   ref: string;
   access_token: string;
-  kind: "overnight" | "day_tour";
+  kind: StayKind;
   check_in: string;
   nights: number;
   check_out: string;
