@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme static {
+  --color-*: initial;
+  --color-forest: #1f3a2a;
+  --color-moss: #3e6b48;
+  --color-moss-strong: #2f5538;
+  --color-moss-soft: #e4ede3;
+  --color-moss-tint: #c9dcc8;
+  --color-river: #2e6f73;
+  --color-river-soft: #ddedec;
+  --color-river-strong: #1f5457;
+  --color-ember: #c9712b;
+  --color-ember-strong: #9a4f12;
+  --color-ember-soft: #f7e6d6;
+  --color-bg: #f6f1e7;
+  --color-surface: #fffdf8;
+  --color-ink: #1e2a22;
+  --color-ink-muted: #5b6a5f;
+  --color-line: #e3dacb;
+  --color-success: #2e7d4f;
+  --color-danger: #b3261e;
+  --color-warning: #9a6700;
+  --color-warning-soft: #fbf0d6;
+  --color-warning-strong: #6e4a00;
+
+  --radius-card: 20px;
+  --radius-input: 12px;
+  --radius-chip: 14px;
+
+  --container-page: 75rem;
+  --container-reading: 42.5rem;
+
+  --shadow-float: 0 8px 24px rgb(30 42 34 / 0.12);
+
+  --tracking-overline: 0.08em;
+
+  --text-display: 2.5rem;
+  --text-display--line-height: 2.75rem;
+  --text-display-lg: 4rem;
+  --text-display-lg--line-height: 4.25rem;
+  --text-h1: 2rem;
+  --text-h1--line-height: 2.375rem;
+  --text-h1-lg: 2.75rem;
+  --text-h1-lg--line-height: 3.125rem;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.875rem;
+  --text-h2-lg: 2rem;
+  --text-h2-lg--line-height: 2.375rem;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.625rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.625rem;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.25rem;
+  --text-overline: 0.75rem;
+  --text-overline--line-height: 1rem;
+}
+
+@theme inline {
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-bg font-sans text-body text-ink antialiased;
+  }
+
+  h1 {
+    @apply font-display text-h1 font-semibold md:text-h1-lg;
+  }
+
+  h2 {
+    @apply font-display text-h2 font-semibold md:text-h2-lg;
+  }
+
+  h3 {
+    @apply font-sans text-h3 font-bold;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-ember);
+    outline-offset: 2px;
+  }
+
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
+  dialog[open] {
+    animation: fade-in 200ms ease-out;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
