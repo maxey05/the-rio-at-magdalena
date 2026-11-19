@@ -11,6 +11,11 @@ export function SiteFooter() {
 
   return (
     <footer className="bg-forest text-bg">
+      {process.env.SITE_ENV !== "production" && (
+        <p className="bg-warning-soft px-4 py-2 text-center text-small font-bold text-warning-strong">
+          Draft preview — not the live site
+        </p>
+      )}
       <div className="mx-auto grid max-w-page gap-12 px-4 py-16 md:grid-cols-3 md:px-8">
         <div className="flex flex-col gap-4">
           <Wordmark />
