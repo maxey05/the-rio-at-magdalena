@@ -1,41 +1,28 @@
-import { Button } from "@/components/button";
-import { InfoCallout } from "@/components/info-callout";
-import { MessengerButton } from "@/components/messenger-button";
 import { PageHeader } from "@/components/page-header";
-import { Section } from "@/components/section";
-import { bookPage, noWalkInsNotice } from "@/lib/content";
 import { pageMetadata } from "@/lib/metadata";
+import { manilaToday } from "@/lib/rules";
+import { getSettings } from "@/lib/settings";
+import { parseSelection } from "@/lib/stay";
+import { BookingWorkspace } from "./booking-workspace";
 
 export const metadata = pageMetadata({
   title: "Book a stay",
   description:
-    "Online booking for The Rio At Magdalena opens soon. Message us on Facebook to ask about dates and slots. No walk-ins: book at least a day ahead.",
+    "Book an overnight stay or a day tour at The Rio At Magdalena. Pick your dates and camp slot, then hold them for 30 minutes while you pay the 50% downpayment by GCash.",
   path: "/book",
 });
 
-export default function BookPage() {
+export default async function BookPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [settings, params] = await Promise.all([getSettings(), searchParams]);
+  const today = manilaToday();
   return (
     <>
-      <PageHeader overline="Book a stay" title={bookPage.title} intro={bookPage.note} />
-      <Section labelledBy="book-soon-title">
-        <div className="flex max-w-reading flex-col items-start gap-6">
-          <h2 id="book-soon-title" className="sr-only">
-            How to book for now
-          </h2>
-          <InfoCallout>
-            <p>{bookPage.body}</p>
-          </InfoCallout>
-          <p>
-            {noWalkInsNotice.title} {noWalkInsNotice.body}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <MessengerButton />
-            <Button href="/rates" variant="secondary">
-              See rates
-            </Button>
-          </div>
-        </div>
-      </Section>
+      <PageHeader
+        overline="Book a stay"
+        title="Pick your dates and slot"
+        intro="Choose overnight or a day tour, then your dates, camp slot and guests. We hold your slots for 30 minutes while you pay."
+      />
+      <BookingWorkspace settings={settings} today={today} initial={parseSelection(params, today, settings)} />
     </>
   );
 }
