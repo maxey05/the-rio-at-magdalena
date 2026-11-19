@@ -78,3 +78,33 @@ export function formatPeso(amount: number): string {
   const sign = amount < 0 ? "-" : "";
   return `${sign}₱${pesoFormatter.format(Math.abs(amount))}`;
 }
+
+export type Settings = {
+  overnightAdult: number;
+  overnightReduced: number;
+  dayAdult: number;
+  dayReduced: number;
+  tentPrice: number;
+  tentStock: number;
+  slotCapacity: number;
+  siteCap: number;
+  windowDays: number;
+  maxNights: number;
+  holdMinutes: number;
+  downpaymentPct: number;
+};
+
+export const DEFAULT_SETTINGS: Settings = {
+  overnightAdult: 500,
+  overnightReduced: 350,
+  dayAdult: 300,
+  dayReduced: 200,
+  tentPrice: 500,
+  tentStock: 5,
+  slotCapacity: 10,
+  siteCap: 100,
+  windowDays: 90,
+  maxNights: 7,
+  holdMinutes: 30,
+  downpaymentPct: 50,
+};

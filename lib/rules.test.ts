@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addDays, formatPeso, manilaNow, manilaToday } from "./rules.ts";
+import { DEFAULT_SETTINGS, addDays, formatPeso, manilaNow, manilaToday } from "./rules.ts";
 
 describe("manilaToday", () => {
   it("rolls to the next Manila day after 16:00 UTC", () => {
@@ -108,5 +108,60 @@ describe("formatPeso", () => {
 
   it("puts the minus sign before the peso sign", () => {
     assert.equal(formatPeso(-350), "-₱350");
+  });
+});
+
+describe("DEFAULT_SETTINGS", () => {
+  it("holds the overnight rates from the owner", () => {
+    assert.equal(DEFAULT_SETTINGS.overnightAdult, 500);
+    assert.equal(DEFAULT_SETTINGS.overnightReduced, 350);
+  });
+
+  it("holds the day tour rates from the owner", () => {
+    assert.equal(DEFAULT_SETTINGS.dayAdult, 300);
+    assert.equal(DEFAULT_SETTINGS.dayReduced, 200);
+  });
+
+  it("holds the tent price and default stock", () => {
+    assert.equal(DEFAULT_SETTINGS.tentPrice, 500);
+    assert.equal(DEFAULT_SETTINGS.tentStock, 5);
+  });
+
+  it("holds the capacity limits", () => {
+    assert.equal(DEFAULT_SETTINGS.slotCapacity, 10);
+    assert.equal(DEFAULT_SETTINGS.siteCap, 100);
+  });
+
+  it("holds the booking window rules", () => {
+    assert.equal(DEFAULT_SETTINGS.windowDays, 90);
+    assert.equal(DEFAULT_SETTINGS.maxNights, 7);
+    assert.equal(DEFAULT_SETTINGS.holdMinutes, 30);
+  });
+
+  it("holds the downpayment percentage", () => {
+    assert.equal(DEFAULT_SETTINGS.downpaymentPct, 50);
+  });
+
+  it("has exactly the twelve expected keys", () => {
+    assert.deepEqual(Object.keys(DEFAULT_SETTINGS).sort(), [
+      "dayAdult",
+      "dayReduced",
+      "downpaymentPct",
+      "holdMinutes",
+      "maxNights",
+      "overnightAdult",
+      "overnightReduced",
+      "siteCap",
+      "slotCapacity",
+      "tentPrice",
+      "tentStock",
+      "windowDays",
+    ]);
+  });
+
+  it("only contains whole pesos and counts", () => {
+    for (const value of Object.values(DEFAULT_SETTINGS)) {
+      assert.ok(Number.isInteger(value));
+    }
   });
 });
