@@ -33,3 +33,34 @@ export async function getSettings(): Promise<Settings> {
     return mergeSettings(null);
   }
 }
+
+export type PaymentDetails = {
+  gcashName: string | null;
+  gcashNumber: string | null;
+  gcashQrPath: string | null;
+};
+
+function clean(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export async function getPaymentDetails(): Promise<PaymentDetails> {
+  const empty: PaymentDetails = { gcashName: null, gcashNumber: null, gcashQrPath: null };
+  try {
+    const { data, error } = await db()
+      .from("settings")
+      .select("gcash_name, gcash_number, gcash_qr_path")
+      .maybeSingle<Pick<SettingsRow, "gcash_name" | "gcash_number" | "gcash_qr_path">>();
+    if (error || !data) {
+      return empty;
+    }
+    return {
+      gcashName: clean(data.gcash_name),
+      gcashNumber: clean(data.gcash_number),
+      gcashQrPath: clean(data.gcash_qr_path),
+    };
+  } catch {
+    return empty;
+  }
+}
