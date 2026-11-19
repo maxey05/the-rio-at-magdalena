@@ -11,8 +11,8 @@
 -- so the public anon key can read and write nothing. The functions below are
 -- also locked to service_role (see the end of this file).
 --
--- Not in this file on purpose: `inquiries` (RFC-014) and `email_log` (RFC-007)
--- are created by their own migrations.
+-- Not in this file on purpose: `inquiries` (RFC-014) is created by its own
+-- migration. `email_log` (RFC-007) is at the end of the table definitions.
 
 create extension if not exists pgcrypto;
 
@@ -170,6 +170,35 @@ create index if not exists booking_nights_booking_idx on booking_nights (booking
 
 
 -- ---------------------------------------------------------------------------
+-- email_log: one row per send attempt (RFC-007). A failed email never undoes
+-- the action that caused it; the admin resends from the log. A resend adds a
+-- new row with status 'resent'. error holds the SMTP error, or 'dev-preview'
+-- when GMAIL_USER is unset and the email was only printed to the console.
+-- inquiry_id is plain text with no foreign key because `inquiries` (RFC-014)
+-- does not exist yet. Deleting a booking keeps its log rows.
+-- ---------------------------------------------------------------------------
+create table if not exists email_log (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in (
+    'proof_received', 'confirmed', 'rejected', 'cancelled', 'refund_sent',
+    'admin_new_proof', 'admin_guest_cancelled', 'admin_inquiry'
+  )),
+  booking_id uuid references bookings(id) on delete set null,
+  inquiry_id text,
+  recipient text not null,
+  subject text not null,
+  body text not null,
+  status text not null check (status in ('sent', 'failed', 'resent')),
+  error text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists email_log_created_idx on email_log (created_at desc);
+create index if not exists email_log_booking_idx on email_log (booking_id);
+create index if not exists email_log_failed_idx on email_log (created_at desc) where status = 'failed';
+
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security: ON everywhere, NO policies. The anon and authenticated
 -- roles can therefore read and write nothing (D-081). As defence in depth the
 -- table privileges are revoked too; service_role bypasses RLS and keeps access.
@@ -180,14 +209,15 @@ alter table settings enable row level security;
 alter table closures enable row level security;
 alter table bookings enable row level security;
 alter table booking_nights enable row level security;
+alter table email_log enable row level security;
 
 do $$
 begin
   if exists (select 1 from pg_roles where rolname = 'anon') then
-    revoke all on camps, slots, settings, closures, bookings, booking_nights from anon;
+    revoke all on camps, slots, settings, closures, bookings, booking_nights, email_log from anon;
   end if;
   if exists (select 1 from pg_roles where rolname = 'authenticated') then
-    revoke all on camps, slots, settings, closures, bookings, booking_nights from authenticated;
+    revoke all on camps, slots, settings, closures, bookings, booking_nights, email_log from authenticated;
   end if;
 end
 $$;
@@ -491,6 +521,19 @@ begin
   return v_old;
 end;
 $$;
+
+
+-- ---------------------------------------------------------------------------
+-- Storage buckets (RFC-008). Both private: payment proofs are never public
+-- (R-17) and the GCash QR is served through short-lived signed URLs.
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('payment-proofs', 'payment-proofs', false, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('site', 'site', false)
+on conflict (id) do nothing;
 
 
 -- ---------------------------------------------------------------------------
