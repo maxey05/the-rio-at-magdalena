@@ -11,8 +11,9 @@
 -- so the public anon key can read and write nothing. The functions below are
 -- also locked to service_role (see the end of this file).
 --
--- Not in this file on purpose: `inquiries` (RFC-014) is created by its own
--- migration. `email_log` (RFC-007) is at the end of the table definitions.
+-- `email_log` (RFC-007) and `inquiries` (RFC-014) are at the end of the table
+-- definitions. supabase/migrations/014-inquiries.sql adds `inquiries` to a
+-- database that was set up before RFC-014.
 
 create extension if not exists pgcrypto;
 
@@ -174,8 +175,8 @@ create index if not exists booking_nights_booking_idx on booking_nights (booking
 -- the action that caused it; the admin resends from the log. A resend adds a
 -- new row with status 'resent'. error holds the SMTP error, or 'dev-preview'
 -- when GMAIL_USER is unset and the email was only printed to the console.
--- inquiry_id is plain text with no foreign key because `inquiries` (RFC-014)
--- does not exist yet. Deleting a booking keeps its log rows.
+-- inquiry_id is plain text with no foreign key, so an inquiry email never
+-- depends on the inquiries table. Deleting a booking keeps its log rows.
 -- ---------------------------------------------------------------------------
 create table if not exists email_log (
   id uuid primary key default gen_random_uuid(),
@@ -199,6 +200,30 @@ create index if not exists email_log_failed_idx on email_log (created_at desc) w
 
 
 -- ---------------------------------------------------------------------------
+-- inquiries (RFC-014): event and prenup inquiries from /events. Never touches
+-- booking_nights or bookings, so an inquiry cannot block a date. type uses the
+-- labels shown on the form. status is new -> replied -> closed. email is stored
+-- lowercase by the app so the 3-per-email-per-Manila-day limit is
+-- case-insensitive.
+-- ---------------------------------------------------------------------------
+create table if not exists inquiries (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 2 and 80),
+  mobile text not null check (char_length(mobile) between 7 and 20),
+  email text not null check (char_length(email) between 3 and 254),
+  type text not null check (type in ('Intimate event', 'Prenup shoot', 'Other')),
+  preferred_date date,
+  guests smallint not null check (guests between 1 and 300),
+  message text not null check (char_length(message) between 10 and 1000),
+  status text not null default 'new' check (status in ('new', 'replied', 'closed')),
+  admin_note text not null default '' check (char_length(admin_note) <= 1000),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists inquiries_status_created_idx on inquiries (status, created_at desc);
+
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security: ON everywhere, NO policies. The anon and authenticated
 -- roles can therefore read and write nothing (D-081). As defence in depth the
 -- table privileges are revoked too; service_role bypasses RLS and keeps access.
@@ -210,17 +235,25 @@ alter table closures enable row level security;
 alter table bookings enable row level security;
 alter table booking_nights enable row level security;
 alter table email_log enable row level security;
+alter table inquiries enable row level security;
 
 do $$
 begin
   if exists (select 1 from pg_roles where rolname = 'anon') then
-    revoke all on camps, slots, settings, closures, bookings, booking_nights, email_log from anon;
+    revoke all on camps, slots, settings, closures, bookings, booking_nights, email_log, inquiries from anon;
   end if;
   if exists (select 1 from pg_roles where rolname = 'authenticated') then
-    revoke all on camps, slots, settings, closures, bookings, booking_nights, email_log from authenticated;
+    revoke all on camps, slots, settings, closures, bookings, booking_nights, email_log, inquiries from authenticated;
   end if;
 end
 $$;
+
+-- service_role must be able to use the tables. Newer Supabase projects no
+-- longer grant this automatically, which shows up as 'permission denied for
+-- table ...' (42501) from the server. Safe to re-run.
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
 
 
 -- ---------------------------------------------------------------------------
@@ -553,3 +586,6 @@ grant execute on function expire_stale_holds() to service_role;
 grant execute on function occupancy_between(date, date) to service_role;
 grant execute on function create_booking(jsonb) to service_role;
 grant execute on function release_booking(uuid, text[], text) to service_role;
+
+-- Make the Data API notice new tables and grants right away.
+notify pgrst, 'reload schema';

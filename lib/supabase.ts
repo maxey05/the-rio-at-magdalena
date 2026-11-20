@@ -1,6 +1,6 @@
 import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { BookingStatus, StayKind } from "./rules.ts";
+import type { BookingStatus, InquiryType, StayKind } from "./rules.ts";
 
 export type Camp = {
   id: number;
@@ -87,6 +87,22 @@ export type Booking = {
   refund_status: "none" | "due" | "sent";
   refund_ref: string | null;
   refunded_at: string | null;
+  created_at: string;
+};
+
+export type InquiryStatus = "new" | "replied" | "closed";
+
+export type Inquiry = {
+  id: string;
+  name: string;
+  mobile: string;
+  email: string;
+  type: InquiryType;
+  preferred_date: string | null;
+  guests: number;
+  message: string;
+  status: InquiryStatus;
+  admin_note: string;
   created_at: string;
 };
 
