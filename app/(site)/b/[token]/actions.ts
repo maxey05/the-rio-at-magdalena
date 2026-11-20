@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { findByToken } from "@/lib/bookings";
+import { cancelBooking, type CancelState } from "@/lib/cancellations";
 import { sendAdminNewProof, sendProofReceived } from "@/lib/email";
 import {
   checkProofBytes,
@@ -12,7 +13,7 @@ import {
   uploadProof,
   type ProofState,
 } from "@/lib/proofs";
-import { normalizeGcashRef, statusLabel, type FieldErrors } from "@/lib/rules";
+import { isGuestCancellable, manilaToday, normalizeGcashRef, statusLabel, type FieldErrors } from "@/lib/rules";
 import type { Booking } from "@/lib/supabase";
 
 const REF_ERROR = "Enter the 13-digit reference number from your GCash receipt.";
@@ -94,4 +95,29 @@ export async function submitProof(token: string, _previous: ProofState, formData
   revalidatePath(`/b/${token}`);
   await sendProofEmails(result.booking);
   return fail("", {});
+}
+
+const CANNOT_CANCEL = "This booking can no longer be cancelled online. Please message us.";
+const CANCEL_HANDLED = "This booking was already changed, so nothing was cancelled.";
+const CANCEL_FAILED = "Something went wrong cancelling your booking. Please try again or message us.";
+
+export async function cancelByToken(token: string): Promise<CancelState> {
+  const booking = await findByToken(token);
+  if (!booking) {
+    return { message: "We could not find this booking." };
+  }
+  const allowed =
+    isGuestCancellable({ status: booking.status, checkIn: booking.check_in }, manilaToday()) &&
+    (booking.status !== "awaiting_payment" || holdIsOpen(booking));
+  if (!allowed) {
+    revalidatePath(`/b/${token}`);
+    return { message: CANNOT_CANCEL };
+  }
+
+  const result = await cancelBooking(booking.id, "guest", null);
+  revalidatePath(`/b/${token}`);
+  if (result.kind === "error") {
+    return { message: CANCEL_FAILED };
+  }
+  return { message: result.kind === "handled" ? CANCEL_HANDLED : null };
 }

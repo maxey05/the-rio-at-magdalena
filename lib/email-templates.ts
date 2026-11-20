@@ -149,7 +149,7 @@ export function composeCancelled(b: Booking, ctx: EmailContext): Composed {
   const by = b.cancelled_by === "guest" ? "at your request" : "by The Rio";
   const refund =
     b.refund_status === "none"
-      ? "No payment was received, so there is nothing to refund."
+      ? "No payment was received, so there is nothing to refund. If you did send GCash, message us on Facebook and we will refund it."
       : `A full refund of ${formatPeso(b.downpayment)} will be sent to you by GCash. We will email you when it is sent.`;
   return guestEmail(
     `Booking cancelled (${b.ref})`,
