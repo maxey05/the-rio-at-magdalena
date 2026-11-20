@@ -1,3 +1,4 @@
+import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { BookingStatus, StayKind } from "./rules.ts";
 
@@ -104,4 +105,61 @@ export function db(): SupabaseClient {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return client;
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export function isAdminEmail(email: string | null | undefined): boolean {
+  const allowed = requireEnv("ADMIN_EMAILS").split(",").map(normalizeEmail).filter(Boolean);
+  if (allowed.length === 0) {
+    throw new Error("ADMIN_EMAILS has no email addresses. Add the admin email to .env.local (see .env.example).");
+  }
+  return typeof email === "string" && allowed.includes(normalizeEmail(email));
+}
+
+export function serverClient(cookies: CookieMethodsServer): SupabaseClient {
+  return createServerClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
+    cookieOptions: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    },
+    cookies,
+  });
+}
+
+export async function authClient(): Promise<SupabaseClient> {
+  const { cookies } = await import("next/headers");
+  const store = await cookies();
+  return serverClient({
+    getAll: () => store.getAll(),
+    setAll: (list) => {
+      try {
+        for (const { name, value, options } of list) {
+          store.set(name, value, options);
+        }
+      } catch {
+        return;
+      }
+    },
+  });
+}
+
+export async function currentAdmin(): Promise<{ email: string } | null> {
+  const { data } = await (await authClient()).auth.getUser();
+  const { email, email_confirmed_at: confirmedAt } = data.user ?? {};
+  return email && confirmedAt && isAdminEmail(email) ? { email } : null;
+}
+
+export async function requireAdmin(): Promise<{ email: string }> {
+  const admin = await currentAdmin();
+  if (admin) {
+    return admin;
+  }
+  const { redirect } = await import("next/navigation");
+  return redirect("/admin/login");
 }

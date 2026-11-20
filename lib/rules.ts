@@ -388,3 +388,29 @@ export function statusLabel(status: BookingStatus): string {
 export function isGuestCancellable(booking: { status: BookingStatus; checkIn: string }, today: string): boolean {
   return CANCELLABLE_STATUSES.includes(booking.status) && today < booking.checkIn;
 }
+
+const REASON_MIN = 10;
+const REASON_MAX = 300;
+const PESO_PATTERN = /^\d{1,7}$/;
+
+export type ReasonResult = { ok: true; value: string } | { ok: false; error: string };
+
+export function validateReason(raw: string): ReasonResult {
+  const value = raw.trim();
+  if (value.length < REASON_MIN) {
+    return { ok: false, error: `Give a reason of at least ${REASON_MIN} characters.` };
+  }
+  if (value.length > REASON_MAX) {
+    return { ok: false, error: `Keep the reason to ${REASON_MAX} characters or fewer.` };
+  }
+  return { ok: true, value };
+}
+
+export function parsePesos(raw: string): number | null {
+  const cleaned = raw.trim().replace(/,/g, "");
+  return PESO_PATTERN.test(cleaned) ? Number(cleaned) : null;
+}
+
+export function canMarkNoShow(checkIn: string, today: string): boolean {
+  return today >= checkIn;
+}

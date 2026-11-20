@@ -8,9 +8,10 @@ import { CopyButton } from "@/components/copy-button";
 import { Countdown } from "@/components/countdown";
 import { stayTimes, whatToBring } from "@/lib/content";
 import { holdIsOpen, MAX_PROOF_BYTES, signedQrUrl } from "@/lib/proofs";
-import { formatPeso, manilaNow, statusLabel } from "@/lib/rules";
+import { formatPeso, isGuestCancellable, manilaNow, manilaToday, statusLabel } from "@/lib/rules";
 import { getPaymentDetails } from "@/lib/settings";
 import type { Booking } from "@/lib/supabase";
+import { CancelForm } from "./cancel-form";
 import { ProofForm } from "./proof-form";
 
 type StatusSectionProps = {
@@ -148,6 +149,71 @@ function Confirmed({ booking }: StatusSectionProps) {
   );
 }
 
+function CancelSection({ booking }: StatusSectionProps) {
+  if (!isGuestCancellable({ status: booking.status, checkIn: booking.check_in }, manilaToday())) {
+    return (
+      <Panel id="cancel-title" title="Need to cancel?">
+        <p>Online cancellation closes the day before check-in. Please message us and we will help.</p>
+        <div>
+          <MessengerButton variant="secondary" label="Message us to cancel" />
+        </div>
+      </Panel>
+    );
+  }
+  const paid = booking.status !== "awaiting_payment";
+  return (
+    <Panel id="cancel-title" title="Need to cancel?">
+      <p>
+        {paid
+          ? `You can cancel until 11:59 PM the day before check-in. We will refund your downpayment of ${formatPeso(booking.downpayment)} by GCash.`
+          : "You can cancel until 11:59 PM the day before check-in. We have not received a payment proof, so there is nothing to refund. If you already sent GCash, message us before you cancel."}
+      </p>
+      <CancelForm token={booking.access_token} />
+    </Panel>
+  );
+}
+
+function RefundNote({ booking }: StatusSectionProps) {
+  if (booking.refund_status === "due") {
+    return (
+      <p>
+        A full refund of <strong className="tabular-nums">{formatPeso(booking.downpayment)}</strong> is due to you. We will
+        send it by GCash to {booking.mobile} and email you when it is sent. If that is not your GCash number, please
+        message us.
+      </p>
+    );
+  }
+  if (booking.refund_status === "sent") {
+    const reference = booking.refund_ref ? `, reference ${booking.refund_ref}` : "";
+    const sentAt = booking.refunded_at ? ` on ${formatManilaTime(booking.refunded_at)} (Manila time)` : "";
+    return <p>{`Refund of ${formatPeso(booking.downpayment)} sent by GCash${reference}${sentAt}.`}</p>;
+  }
+  return null;
+}
+
+function Cancelled({ booking }: StatusSectionProps) {
+  return (
+    <Panel id="cancelled-title" title="This booking was cancelled">
+      <p>{booking.cancelled_by === "guest" ? "You cancelled this booking." : "We cancelled this booking."}</p>
+      {booking.cancelled_by === "admin" && booking.cancel_reason ? <p>Reason: {booking.cancel_reason}</p> : null}
+      {booking.cancelled_at ? (
+        <p className="text-ink-muted">Cancelled {formatManilaTime(booking.cancelled_at)} (Manila time).</p>
+      ) : null}
+      {booking.refund_status === "none" ? <p>No payment was received, so there is nothing to refund. If you did send GCash, message us and we will refund it.</p> : null}
+      <RefundNote booking={booking} />
+    </Panel>
+  );
+}
+
+function WithCancel({ booking, children }: StatusSectionProps & { children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-8">
+      {children}
+      <CancelSection booking={booking} />
+    </div>
+  );
+}
+
 function Expired({ booking }: StatusSectionProps) {
   return (
     <Panel id="expired-title" title="Your hold expired">
@@ -163,6 +229,7 @@ function Rejected({ booking }: StatusSectionProps) {
   return (
     <Panel id="rejected-title" title="We could not confirm your payment">
       <p>{booking.reject_reason ?? "We could not verify your payment."}</p>
+      <RefundNote booking={booking} />
       <div>
         <MessengerButton label="Message us" />
       </div>
@@ -181,11 +248,27 @@ function PlainStatus({ booking }: StatusSectionProps) {
 export async function StatusSection({ booking }: StatusSectionProps) {
   switch (booking.status) {
     case "awaiting_payment":
-      return holdIsOpen(booking) ? <AwaitingPayment booking={booking} /> : <Expired booking={booking} />;
+      return holdIsOpen(booking) ? (
+        <WithCancel booking={booking}>
+          <AwaitingPayment booking={booking} />
+        </WithCancel>
+      ) : (
+        <Expired booking={booking} />
+      );
     case "payment_review":
-      return <PaymentReview booking={booking} />;
+      return (
+        <WithCancel booking={booking}>
+          <PaymentReview booking={booking} />
+        </WithCancel>
+      );
     case "confirmed":
-      return <Confirmed booking={booking} />;
+      return (
+        <WithCancel booking={booking}>
+          <Confirmed booking={booking} />
+        </WithCancel>
+      );
+    case "cancelled":
+      return <Cancelled booking={booking} />;
     case "expired":
       return <Expired booking={booking} />;
     case "rejected":
