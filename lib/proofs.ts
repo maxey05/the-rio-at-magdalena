@@ -6,6 +6,7 @@ export const QR_BUCKET = "site";
 export const MAX_PROOF_BYTES = 5 * 1024 * 1024;
 
 const QR_URL_SECONDS = 60 * 60;
+export const PROOF_URL_SECONDS = 10 * 60;
 const UNIQUE_VIOLATION = "23505";
 
 export type ProofImage = { ext: "jpg" | "png" | "webp"; contentType: string };
@@ -106,5 +107,10 @@ export async function expireStaleHolds(): Promise<void> {
 
 export async function signedQrUrl(path: string): Promise<string | null> {
   const { data, error } = await db().storage.from(QR_BUCKET).createSignedUrl(path, QR_URL_SECONDS);
+  return error ? null : data.signedUrl;
+}
+
+export async function signedProofUrl(path: string): Promise<string | null> {
+  const { data, error } = await db().storage.from(PROOF_BUCKET).createSignedUrl(path, PROOF_URL_SECONDS);
   return error ? null : data.signedUrl;
 }

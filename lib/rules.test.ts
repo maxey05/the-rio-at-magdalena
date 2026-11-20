@@ -6,6 +6,7 @@ import {
   STATUSES,
   addDays,
   bookingWindow,
+  canMarkNoShow,
   checkSlotCapacity,
   formatPeso,
   guestCount,
@@ -17,10 +18,12 @@ import {
   newRef,
   normalizeGcashRef,
   normalizeMobile,
+  parsePesos,
   priceBooking,
   stayNights,
   statusLabel,
   validateDetails,
+  validateReason,
   validateStay,
   type DetailsForm,
 } from "./rules.ts";
@@ -585,5 +588,53 @@ describe("DEFAULT_SETTINGS", () => {
     for (const value of Object.values(DEFAULT_SETTINGS)) {
       assert.ok(Number.isInteger(value));
     }
+  });
+});
+
+describe("validateReason", () => {
+  it("rejects an empty reason", () => {
+    assert.deepEqual(validateReason(""), { ok: false, error: "Give a reason of at least 10 characters." });
+  });
+
+  it("rejects 9 characters and accepts 10", () => {
+    assert.equal(validateReason("a".repeat(9)).ok, false);
+    assert.deepEqual(validateReason("a".repeat(10)), { ok: true, value: "a".repeat(10) });
+  });
+
+  it("accepts 300 characters and rejects 301", () => {
+    assert.equal(validateReason("a".repeat(300)).ok, true);
+    assert.deepEqual(validateReason("a".repeat(301)), { ok: false, error: "Keep the reason to 300 characters or fewer." });
+  });
+
+  it("trims surrounding whitespace before counting", () => {
+    assert.equal(validateReason(`   ${"a".repeat(9)}   `).ok, false);
+    assert.deepEqual(validateReason(`  ${"a".repeat(10)}
+`), { ok: true, value: "a".repeat(10) });
+    assert.equal(validateReason(`${" ".repeat(20)}`).ok, false);
+  });
+});
+
+describe("parsePesos", () => {
+  it("accepts whole pesos including zero and thousands commas", () => {
+    assert.equal(parsePesos("0"), 0);
+    assert.equal(parsePesos(" 1350 "), 1350);
+    assert.equal(parsePesos("1,350"), 1350);
+  });
+
+  it("refuses empty, negative, decimal, text and huge values", () => {
+    for (const raw of ["", " ", "-5", "12.5", "abc", "1e3", "12345678"]) {
+      assert.equal(parsePesos(raw), null, raw);
+    }
+  });
+});
+
+describe("canMarkNoShow", () => {
+  it("is false before the check-in date", () => {
+    assert.equal(canMarkNoShow("2026-11-21", "2026-11-20"), false);
+  });
+
+  it("is true on and after the check-in date", () => {
+    assert.equal(canMarkNoShow("2026-11-21", "2026-11-21"), true);
+    assert.equal(canMarkNoShow("2026-11-21", "2026-11-22"), true);
   });
 });
