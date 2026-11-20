@@ -72,7 +72,7 @@ async function send(
   let status: "sent" | "resent" | "failed" = okStatus;
   let error: string | null = null;
   try {
-    if (!process.env.GMAIL_USER) {
+    if (!process.env.GMAIL_USER && process.env.SITE_ENV !== "production") {
       console.log(`[email dev-preview] ${kind}\nTo: ${to}\nSubject: ${subject}\n\n${body}\n`);
       error = "dev-preview";
     } else if (!to) {
