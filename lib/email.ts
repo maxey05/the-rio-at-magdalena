@@ -169,7 +169,7 @@ export const sendAdminGuestCancelled = (booking: Booking) =>
 
 export async function sendAdminInquiry(inquiry: InquiryEmail): Promise<EmailResult> {
   try {
-    const { subject, body } = composeAdminInquiry(inquiry, requireEnv("SITE_URL").replace(/\/+$/, ""));
+    const { subject, body } = composeAdminInquiry(inquiry, (process.env.SITE_URL ?? "[SITE_URL is not set]").replace(/\/+$/, ""));
     const inquiryId = inquiry.id === undefined ? null : String(inquiry.id);
     return await send("admin_inquiry", adminRecipients(), subject, body, { inquiryId });
   } catch (caught) {

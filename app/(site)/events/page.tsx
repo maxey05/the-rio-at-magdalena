@@ -1,16 +1,16 @@
 import { CheckIcon } from "@/components/icons";
-import { InfoCallout } from "@/components/info-callout";
 import { MessengerButton } from "@/components/messenger-button";
 import { PageHeader } from "@/components/page-header";
 import { PhotoFrame } from "@/components/photo-card";
 import { Section } from "@/components/section";
 import { eventsContent } from "@/lib/content";
 import { pageMetadata } from "@/lib/metadata";
+import { InquiryForm } from "./inquiry-form";
 
 export const metadata = pageMetadata({
   title: "Events & prenup shoots",
   description:
-    "Plan an intimate event or a prenup shoot at The Rio At Magdalena, a riverside campsite in Laguna. Message us on Facebook to ask about dates and details.",
+    "Plan an intimate event or a prenup shoot at The Rio At Magdalena, a riverside campsite in Laguna. Send us an inquiry about dates and details.",
   path: "/events",
 });
 
@@ -52,10 +52,11 @@ export default function EventsPage() {
       <Section tone="surface" labelledBy="events-inquiry-title">
         <div className="flex flex-col items-start gap-6">
           <h2 id="events-inquiry-title">Send an inquiry</h2>
-          <InfoCallout>
-            <p>{eventsContent.formNotice}</p>
-          </InfoCallout>
-          <MessengerButton />
+          <InquiryForm />
+          <div className="flex flex-col items-start gap-3 border-t border-line pt-6">
+            <p className="text-ink-muted">{eventsContent.formNotice}</p>
+            <MessengerButton variant="secondary" />
+          </div>
         </div>
       </Section>
     </>

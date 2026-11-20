@@ -16,6 +16,7 @@ import {
   manilaToday,
   newAccessToken,
   newRef,
+  normalizeNewlines,
   normalizeGcashRef,
   normalizeMobile,
   parsePesos,
@@ -23,9 +24,12 @@ import {
   stayNights,
   statusLabel,
   validateDetails,
+  validateInquiry,
   validateReason,
   validateStay,
+  INQUIRY_TYPES,
   type DetailsForm,
+  type InquiryForm,
 } from "./rules.ts";
 
 const TODAY = "2026-11-19";
@@ -636,5 +640,140 @@ describe("canMarkNoShow", () => {
   it("is true on and after the check-in date", () => {
     assert.equal(canMarkNoShow("2026-11-21", "2026-11-21"), true);
     assert.equal(canMarkNoShow("2026-11-21", "2026-11-22"), true);
+  });
+});
+
+const validInquiry: InquiryForm = {
+  name: "  Ana Reyes ",
+  mobile: "0917 123 4567",
+  email: " Ana@Example.COM ",
+  type: "Prenup shoot",
+  preferredDate: "2026-12-05",
+  guests: "40",
+  message: "  We would like to shoot at golden hour.  ",
+  agreePrivacy: true,
+  website: "",
+};
+
+function inquiryWith(changes: Partial<InquiryForm>) {
+  return validateInquiry({ ...validInquiry, ...changes }, TODAY);
+}
+
+describe("validateInquiry", () => {
+  it("accepts a valid inquiry and returns trimmed, normalized values", () => {
+    const result = validateInquiry(validInquiry, TODAY);
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.deepEqual(result.values, {
+        name: "Ana Reyes",
+        mobile: "+639171234567",
+        email: "ana@example.com",
+        type: "Prenup shoot",
+        preferred_date: "2026-12-05",
+        guests: 40,
+        message: "We would like to shoot at golden hour.",
+      });
+    }
+  });
+
+  it("accepts all three types", () => {
+    assert.deepEqual([...INQUIRY_TYPES], ["Intimate event", "Prenup shoot", "Other"]);
+    for (const type of INQUIRY_TYPES) {
+      assert.equal(inquiryWith({ type }).ok, true, type);
+    }
+  });
+
+  it("rejects an unknown or empty type", () => {
+    assert.ok(inquiryWith({ type: "Wedding" }).errors.type);
+    assert.ok(inquiryWith({ type: "" }).errors.type);
+  });
+
+  it("reports every missing field at once", () => {
+    const result = validateInquiry(
+      { name: "", mobile: "", email: "", type: "", preferredDate: "", guests: "", message: "", agreePrivacy: false, website: "" },
+      TODAY,
+    );
+    assert.equal(result.ok, false);
+    assert.deepEqual(Object.keys(result.errors).sort(), ["agreePrivacy", "email", "guests", "message", "mobile", "name", "type"]);
+  });
+
+  it("makes the preferred date optional", () => {
+    const result = inquiryWith({ preferredDate: "   " });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.values.preferred_date, null);
+    }
+  });
+
+  it("accepts today as the preferred date and rejects yesterday", () => {
+    assert.equal(inquiryWith({ preferredDate: TODAY }).ok, true);
+    assert.ok(inquiryWith({ preferredDate: "2026-11-18" }).errors.preferredDate);
+  });
+
+  it("accepts a far-future preferred date", () => {
+    assert.equal(inquiryWith({ preferredDate: "2030-01-01" }).ok, true);
+  });
+
+  it("rejects malformed and impossible dates", () => {
+    for (const preferredDate of ["12/05/2026", "2026-13-01", "2027-02-30", "tomorrow", "2026-1-5"]) {
+      assert.ok(inquiryWith({ preferredDate }).errors.preferredDate, preferredDate);
+    }
+  });
+
+  it("limits guests to 1 through 300", () => {
+    assert.equal(inquiryWith({ guests: "1" }).ok, true);
+    assert.equal(inquiryWith({ guests: "300" }).ok, true);
+    for (const guests of ["0", "301", "-5", "1.5", "ten", "", "1e2", "1000"]) {
+      assert.ok(inquiryWith({ guests }).errors.guests, guests);
+    }
+  });
+
+  it("limits the message to 10 through 1000 characters after trimming", () => {
+    assert.equal(inquiryWith({ message: "x".repeat(10) }).ok, true);
+    assert.equal(inquiryWith({ message: "x".repeat(1000) }).ok, true);
+    assert.ok(inquiryWith({ message: "x".repeat(9) }).errors.message);
+    assert.ok(inquiryWith({ message: "x".repeat(1001) }).errors.message);
+    assert.ok(inquiryWith({ message: `   ${"x".repeat(9)}   ` }).errors.message);
+  });
+
+  it("requires the privacy consent", () => {
+    assert.ok(inquiryWith({ agreePrivacy: false }).errors.agreePrivacy);
+  });
+
+  it("validates name, email and mobile like the booking flow", () => {
+    assert.ok(inquiryWith({ name: "A" }).errors.name);
+    assert.ok(inquiryWith({ name: "x".repeat(81) }).errors.name);
+    assert.ok(inquiryWith({ email: "not-an-email" }).errors.email);
+    assert.ok(inquiryWith({ mobile: "12345" }).errors.mobile);
+    assert.equal(inquiryWith({ mobile: "+63 917 123 4567" }).ok, true);
+  });
+
+  it("treats a filled honeypot as spam with no field errors", () => {
+    const result = inquiryWith({ website: "http://spam.example" });
+    assert.deepEqual(result, { ok: false, errors: {}, spam: true });
+  });
+
+  it("treats a honeypot of only spaces as empty", () => {
+    assert.equal(inquiryWith({ website: "   " }).ok, true);
+  });
+
+  it("flags spam even when other fields are invalid", () => {
+    assert.deepEqual(inquiryWith({ website: "x", name: "", guests: "0" }), { ok: false, errors: {}, spam: true });
+  });
+});
+
+describe("normalizeNewlines and inquiry messages", () => {
+  it("turns CRLF and CR into LF", () => {
+    assert.equal(normalizeNewlines("a\r\nb\rc\nd"), "a\nb\nc\nd");
+  });
+
+  it("counts a browser CRLF line break as one character", () => {
+    const message = `${"x".repeat(499)}\r\n${"y".repeat(500)}`;
+    const result = validateInquiry({ ...validInquiry, message }, TODAY);
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.values.message.includes("\r"), false);
+      assert.equal(result.values.message.length, 1000);
+    }
   });
 });

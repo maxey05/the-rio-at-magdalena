@@ -359,6 +359,112 @@ export function validateDetails(form: DetailsForm): DetailsResult {
   return { ok: true, errors: {}, values: { name, email, mobile, notes } };
 }
 
+export const INQUIRY_TYPES = ["Intimate event", "Prenup shoot", "Other"] as const;
+
+export type InquiryType = (typeof INQUIRY_TYPES)[number];
+
+export type InquiryForm = {
+  name: string;
+  mobile: string;
+  email: string;
+  type: string;
+  preferredDate: string;
+  guests: string;
+  message: string;
+  agreePrivacy: boolean;
+  website: string;
+};
+
+export type InquiryValues = {
+  name: string;
+  mobile: string;
+  email: string;
+  type: InquiryType;
+  preferred_date: string | null;
+  guests: number;
+  message: string;
+};
+
+export type InquiryFormValues = Omit<InquiryForm, "website">;
+
+export type InquiryState = {
+  ok: boolean;
+  message: string | null;
+  errors: FieldErrors;
+  values: InquiryFormValues;
+};
+
+export function normalizeNewlines(raw: string): string {
+  return raw.replace(/\r\n?/g, "\n");
+}
+
+export type InquiryResult =
+  | { ok: true; errors: Record<string, never>; values: InquiryValues }
+  | { ok: false; errors: FieldErrors; spam?: true };
+
+export const INQUIRY_GUESTS_MAX = 300;
+export const INQUIRY_MESSAGE_MIN = 10;
+export const INQUIRY_MESSAGE_MAX = 1000;
+export const INQUIRY_DAILY_LIMIT = 3;
+const GUEST_COUNT_PATTERN = /^\d{1,3}$/;
+
+function validatePreferredDate(raw: string, today: string): string | null {
+  if (!isRealDate(raw)) {
+    return "Choose a real date, or leave it empty.";
+  }
+  return raw < today ? "Choose today or a later date, or leave it empty." : null;
+}
+
+export function validateInquiry(form: InquiryForm, today: string): InquiryResult {
+  if (form.website.trim() !== "") {
+    return { ok: false, errors: {}, spam: true };
+  }
+  const name = form.name.trim();
+  const email = form.email.trim().toLowerCase();
+  const mobile = normalizeMobile(form.mobile);
+  const type = INQUIRY_TYPES.find((candidate) => candidate === form.type);
+  const preferredDate = form.preferredDate.trim();
+  const guestsText = form.guests.trim();
+  const guests = GUEST_COUNT_PATTERN.test(guestsText) ? Number(guestsText) : null;
+  const message = normalizeNewlines(form.message).trim();
+  const errors: FieldErrors = {};
+  const nameError = validateName(name);
+  const emailError = validateEmail(email);
+  const dateError = preferredDate === "" ? null : validatePreferredDate(preferredDate, today);
+  if (nameError) {
+    errors.name = nameError;
+  }
+  if (mobile === null) {
+    errors.mobile = "Enter a Philippine mobile number like 0917 123 4567.";
+  }
+  if (emailError) {
+    errors.email = emailError;
+  }
+  if (type === undefined) {
+    errors.type = "Choose what you are planning.";
+  }
+  if (dateError) {
+    errors.preferredDate = dateError;
+  }
+  if (guests === null || guests < 1 || guests > INQUIRY_GUESTS_MAX) {
+    errors.guests = `Enter a number of guests from 1 to ${INQUIRY_GUESTS_MAX}.`;
+  }
+  if (message.length < INQUIRY_MESSAGE_MIN || message.length > INQUIRY_MESSAGE_MAX) {
+    errors.message = `Write between ${INQUIRY_MESSAGE_MIN} and ${INQUIRY_MESSAGE_MAX} characters.`;
+  }
+  if (!form.agreePrivacy) {
+    errors.agreePrivacy = "Please agree to the privacy notice.";
+  }
+  if (Object.keys(errors).length > 0 || mobile === null || type === undefined || guests === null) {
+    return { ok: false, errors };
+  }
+  return {
+    ok: true,
+    errors: {},
+    values: { name, mobile, email, type, preferred_date: preferredDate === "" ? null : preferredDate, guests, message },
+  };
+}
+
 export function newRef(randomBytes: ArrayLike<number>): string {
   let code = "";
   for (let index = 0; index < randomBytes.length && code.length < REF_LENGTH; index += 1) {

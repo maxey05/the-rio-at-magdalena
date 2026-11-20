@@ -90,6 +90,31 @@ export function TextAreaField({ id, label, error, hint, className, ...props }: T
   );
 }
 
+type SelectFieldProps = Omit<ComponentProps<"select">, "id"> & {
+  id: string;
+  label: string;
+  error?: string;
+  hint?: string;
+};
+
+export function SelectField({ id, label, error, hint, className, children, ...props }: SelectFieldProps) {
+  return (
+    <FieldShell id={id} label={label} error={error} hint={hint}>
+      {(describedBy, invalid) => (
+        <select
+          id={id}
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          {...props}
+          className={`${controlStyles} min-h-12 ${invalid ? "border-danger" : "border-line"} ${className ?? ""}`}
+        >
+          {children}
+        </select>
+      )}
+    </FieldShell>
+  );
+}
+
 type CheckboxFieldProps = Omit<ComponentProps<"input">, "id" | "type"> & {
   id: string;
   error?: string;
