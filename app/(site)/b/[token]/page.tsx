@@ -6,6 +6,7 @@ import { holdIsOpen } from "@/lib/proofs";
 import { addDays, formatPeso, type BookingStatus } from "@/lib/rules";
 import { formatDayWithYear } from "@/lib/stay";
 import type { Booking } from "@/lib/supabase";
+import { CancelledStep } from "./cancelled-step";
 import { PaymentStep } from "./payment-step";
 import { ReviewStep } from "./review-step";
 import { StatusSection } from "./status-sections";
@@ -68,6 +69,10 @@ export default async function BookingPage({ params }: BookingPageProps) {
 
   if (booking.status === "payment_review") {
     return <ReviewStep booking={booking} slotNames={slotNames} />;
+  }
+
+  if (booking.status === "cancelled") {
+    return <CancelledStep booking={booking} slotNames={slotNames} />;
   }
 
   return (
