@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/button";
 import { CheckboxField, Field, SelectField, TextAreaField } from "@/components/field";
 import { CheckIcon, InfoIcon } from "@/components/icons";
+import { TopLoadingBar } from "@/components/top-loading-bar";
 import { eventsContent } from "@/lib/content";
 import { INQUIRY_TYPES, type InquiryState } from "@/lib/rules";
 import { submitInquiry } from "./actions";
@@ -46,6 +47,7 @@ export function InquiryForm() {
 
   return (
     <form ref={formRef} action={formAction} noValidate className="flex w-full max-w-reading flex-col gap-4">
+      <TopLoadingBar active={pending} />
       <p className="text-ink-muted">{copy.intro}</p>
       {state.message ? (
         <p role="alert" className="flex items-start gap-3 rounded-input border border-danger bg-surface p-4 text-danger">
