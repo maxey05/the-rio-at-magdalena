@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@/components/button";
 import { CheckIcon, InfoIcon } from "@/components/icons";
+import { TopLoadingBar } from "@/components/top-loading-bar";
 import type { AdminActionState } from "@/lib/admin";
 import { resendEmail } from "./actions";
 
@@ -14,6 +15,7 @@ export function ResendButton({ emailId }: { emailId: string }) {
 
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
+      <TopLoadingBar active={pending} />
       <input type="hidden" name="emailId" value={emailId} />
       <Button type="submit" variant="secondary" size="small" disabled={pending}>
         {pending ? "Resending..." : "Resend email"}
