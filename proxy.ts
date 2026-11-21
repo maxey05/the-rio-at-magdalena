@@ -18,8 +18,15 @@ function hasValidPreviewLogin(header: string | null): boolean {
   }
 }
 
+// A request is a client preview when it comes in on the client-preview branch address,
+// or when PREVIEW_MODE is on. Checking the address means the lock never depends on a variable.
+function isPreviewRequest(request: NextRequest): boolean {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+  return host.startsWith("client-preview--") || process.env.PREVIEW_MODE === "true";
+}
+
 function previewGate(request: NextRequest): NextResponse | null {
-  if (process.env.PREVIEW_MODE !== "true") return null; // production: gate is off
+  if (!isPreviewRequest(request)) return null; // production: gate is off
 
   if (!hasValidPreviewLogin(request.headers.get("authorization"))) {
     return new NextResponse("Authentication required", {
@@ -40,7 +47,7 @@ export async function proxy(request: NextRequest) {
 
   if (!request.nextUrl.pathname.startsWith("/admin")) {
     const pass = NextResponse.next();
-    if (process.env.PREVIEW_MODE === "true") {
+    if (isPreviewRequest(request)) {
       pass.headers.set("X-Robots-Tag", "noindex, nofollow");
     }
     return pass;
