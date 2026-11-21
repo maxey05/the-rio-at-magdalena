@@ -2,19 +2,35 @@
 
 import Image from "next/image";
 import { useEffect, useState, type ChangeEvent } from "react";
-import { CameraIcon, InfoIcon } from "@/components/icons";
+import { InfoIcon, UploadIcon } from "@/components/icons";
 
 type UploadBoxProps = {
   id: string;
   name: string;
+  accept: readonly string[];
   maxBytes: number;
+  title: string;
+  hint: string;
+  typeError: string;
+  sizeError: string;
+  previewAlt?: string;
   invalid?: boolean;
   describedBy?: string;
 };
 
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-export function UploadBox({ id, name, maxBytes, invalid = false, describedBy }: UploadBoxProps) {
+export function UploadBox({
+  id,
+  name,
+  accept,
+  maxBytes,
+  title,
+  hint,
+  typeError,
+  sizeError,
+  previewAlt = "Preview of your upload",
+  invalid = false,
+  describedBy,
+}: UploadBoxProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -36,18 +52,20 @@ export function UploadBox({ id, name, maxBytes, invalid = false, describedBy }: 
     if (!file) {
       return;
     }
-    if (!ACCEPTED_TYPES.includes(file.type)) {
+    if (!accept.includes(file.type)) {
       input.value = "";
-      setLocalError("Upload a JPG, PNG or WebP image.");
+      setLocalError(typeError);
       return;
     }
     if (file.size > maxBytes) {
       input.value = "";
-      setLocalError(`That image is over ${Math.round(maxBytes / (1024 * 1024))} MB. Choose a smaller screenshot.`);
+      setLocalError(sizeError);
       return;
     }
-    setPreviewUrl(URL.createObjectURL(file));
     setFileName(file.name);
+    if (file.type.startsWith("image/")) {
+      setPreviewUrl(URL.createObjectURL(file));
+    }
   }
 
   const errorId = `${id}-local-error`;
@@ -58,7 +76,7 @@ export function UploadBox({ id, name, maxBytes, invalid = false, describedBy }: 
         id={id}
         name={name}
         type="file"
-        accept={ACCEPTED_TYPES.join(",")}
+        accept={accept.join(",")}
         onChange={pick}
         aria-invalid={invalid || localError !== null}
         aria-describedby={[describedBy, localError ? errorId : null].filter(Boolean).join(" ") || undefined}
@@ -66,29 +84,20 @@ export function UploadBox({ id, name, maxBytes, invalid = false, describedBy }: 
       />
       <label
         htmlFor={id}
-        className={`flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-surface p-4 text-center transition-colors duration-150 ease-out hover:bg-moss-soft peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ember ${
-          invalid || localError ? "border-danger" : "border-line"
+        className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xs border-2 border-dashed bg-paper p-4 text-center transition-colors duration-150 ease-out hover:bg-oatmeal peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-olive-strong ${
+          invalid || localError ? "border-danger" : "border-sand-line"
         }`}
       >
         {previewUrl ? (
-          <Image
-            src={previewUrl}
-            alt="Preview of your GCash screenshot"
-            width={96}
-            height={96}
-            unoptimized
-            className="h-24 w-24 rounded-input object-cover"
-          />
+          <Image src={previewUrl} alt={previewAlt} width={72} height={72} unoptimized className="size-18 rounded-xs object-cover" />
         ) : (
-          <CameraIcon width={32} height={32} className="text-moss" />
+          <UploadIcon width={28} height={28} className="text-olive-strong" />
         )}
-        <span className="font-bold text-ink">{fileName ?? "Upload GCash screenshot"}</span>
-        <span className="text-small text-ink-muted">
-          {fileName ? "Tap to choose a different image" : "JPG, PNG or WebP, up to 5 MB"}
-        </span>
+        <span className="font-semibold text-earth">{fileName ?? title}</span>
+        <span className="text-base text-earth-muted">{fileName ? "Tap to choose a different file" : hint}</span>
       </label>
       {localError ? (
-        <p id={errorId} role="alert" className="flex items-start gap-2 text-small text-danger">
+        <p id={errorId} role="alert" className="flex items-start gap-2 text-base text-danger">
           <InfoIcon width={18} height={18} className="mt-0.5 shrink-0" />
           {localError}
         </p>

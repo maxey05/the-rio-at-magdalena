@@ -1,18 +1,11 @@
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { Button } from "@/components/button";
 import { CheckIcon } from "@/components/icons";
-import { InfoCallout } from "@/components/info-callout";
 import { MessengerButton } from "@/components/messenger-button";
-import { CopyButton } from "@/components/copy-button";
-import { Countdown } from "@/components/countdown";
 import { stayTimes, whatToBring } from "@/lib/content";
-import { holdIsOpen, MAX_PROOF_BYTES, signedQrUrl } from "@/lib/proofs";
 import { formatPeso, isGuestCancellable, manilaNow, manilaToday, statusLabel } from "@/lib/rules";
-import { getPaymentDetails } from "@/lib/settings";
 import type { Booking } from "@/lib/supabase";
 import { CancelForm } from "./cancel-form";
-import { ProofForm } from "./proof-form";
 
 type StatusSectionProps = {
   booking: Booking;
@@ -46,82 +39,6 @@ function Panel({ id, title, children }: { id: string; title: string; children: R
   );
 }
 
-async function AwaitingPayment({ booking }: StatusSectionProps) {
-  const details = await getPaymentDetails();
-  const qrUrl = details.gcashQrPath ? await signedQrUrl(details.gcashQrPath) : null;
-  const ready = details.gcashName !== null && details.gcashNumber !== null && qrUrl !== null;
-
-  return (
-    <div className="flex flex-col gap-6">
-      {booking.hold_expires_at ? <Countdown expiresAt={booking.hold_expires_at} /> : null}
-      {ready ? (
-        <>
-          <Panel id="pay-title" title="Pay with GCash">
-            <p>
-              Send <strong className="tabular-nums">{formatPeso(booking.downpayment)}</strong> to hold your booking. The
-              rest, {formatPeso(booking.balance)}, is paid at check-in.
-            </p>
-            <dl className="flex flex-col gap-4 rounded-input bg-moss-soft p-4">
-              <div>
-                <dt className="text-small text-ink-muted">GCash account name</dt>
-                <dd className="font-bold">{details.gcashName}</dd>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <dt className="text-small text-ink-muted">GCash number</dt>
-                  <dd className="font-bold tabular-nums">{details.gcashNumber}</dd>
-                </div>
-                <CopyButton text={details.gcashNumber ?? ""} />
-              </div>
-            </dl>
-            <div className="flex justify-center">
-              <Image
-                src={qrUrl}
-                alt={`GCash QR code for ${details.gcashName}`}
-                width={240}
-                height={240}
-                unoptimized
-                className="h-60 w-60 rounded-input border border-line bg-surface object-contain"
-              />
-            </div>
-            <ol className="flex list-decimal flex-col gap-2 pl-6">
-              <li>Open GCash and choose Send Money, or scan the QR code.</li>
-              <li>Send exactly {formatPeso(booking.downpayment)}.</li>
-              <li>Save the receipt, then enter its 13-digit reference number and upload a screenshot below.</li>
-            </ol>
-          </Panel>
-          <Panel id="proof-title" title="Send your payment proof">
-            <ProofForm token={booking.access_token} maxBytes={MAX_PROOF_BYTES} />
-          </Panel>
-        </>
-      ) : (
-        <Panel id="pay-title" title="Pay with GCash">
-          <InfoCallout>
-            <p>Payment details are being set up — please message us.</p>
-          </InfoCallout>
-          <div>
-            <MessengerButton />
-          </div>
-        </Panel>
-      )}
-    </div>
-  );
-}
-
-function PaymentReview({ booking }: StatusSectionProps) {
-  const lastFour = booking.gcash_ref ? booking.gcash_ref.slice(-4) : null;
-  return (
-    <Panel id="review-title" title="We're checking your payment">
-      <p>Thanks! We received your payment proof and will confirm your booking by email once we have checked it.</p>
-      <ul className="flex flex-col gap-1 text-ink-muted">
-        {lastFour ? <li>GCash reference ending in {lastFour}</li> : null}
-        {booking.proof_submitted_at ? <li>Sent {formatManilaTime(booking.proof_submitted_at)} (Manila time)</li> : null}
-      </ul>
-      <p>Your slots stay held while we check.</p>
-    </Panel>
-  );
-}
-
 function Confirmed({ booking }: StatusSectionProps) {
   const times =
     booking.kind === "day_tour"
@@ -135,7 +52,7 @@ function Confirmed({ booking }: StatusSectionProps) {
       </p>
       <p>{times}</p>
       <p>
-        Balance due at check-in: <strong className="tabular-nums">{formatPeso(booking.balance)}</strong>
+        Balance due a day before arrival: <strong className="tabular-nums">{formatPeso(booking.balance)}</strong>
       </p>
       <div className="flex flex-col gap-2">
         <h3>What to bring</h3>
@@ -149,7 +66,7 @@ function Confirmed({ booking }: StatusSectionProps) {
   );
 }
 
-function CancelSection({ booking }: StatusSectionProps) {
+export function CancelSection({ booking }: StatusSectionProps) {
   if (!isGuestCancellable({ status: booking.status, checkIn: booking.check_in }, manilaToday())) {
     return (
       <Panel id="cancel-title" title="Need to cancel?">
@@ -248,19 +165,7 @@ function PlainStatus({ booking }: StatusSectionProps) {
 export async function StatusSection({ booking }: StatusSectionProps) {
   switch (booking.status) {
     case "awaiting_payment":
-      return holdIsOpen(booking) ? (
-        <WithCancel booking={booking}>
-          <AwaitingPayment booking={booking} />
-        </WithCancel>
-      ) : (
-        <Expired booking={booking} />
-      );
-    case "payment_review":
-      return (
-        <WithCancel booking={booking}>
-          <PaymentReview booking={booking} />
-        </WithCancel>
-      );
+      return <Expired booking={booking} />;
     case "confirmed":
       return (
         <WithCancel booking={booking}>

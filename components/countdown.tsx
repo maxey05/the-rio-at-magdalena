@@ -35,11 +35,11 @@ export function Countdown({ expiresAt, onExpiredLabel = "Hold expired" }: Countd
   if (remaining === 0) {
     return (
       <div className="flex flex-wrap items-center gap-3">
-        <p role="status" className="flex items-center gap-2 font-bold text-warning-strong">
+        <p role="status" className="flex items-center gap-2 font-semibold text-warning-strong">
           <ClockIcon width={20} height={20} />
           {onExpiredLabel}
         </p>
-        <Button href="/book" variant="secondary" size="small">
+        <Button href="/book" variant="ghost-earth" size="small">
           Start over
         </Button>
       </div>
@@ -47,9 +47,12 @@ export function Countdown({ expiresAt, onExpiredLabel = "Hold expired" }: Countd
   }
 
   return (
-    <p role="timer" className="flex items-center gap-2 font-bold tabular-nums text-warning-strong">
-      <ClockIcon width={20} height={20} />
-      <span>Slot held for {remaining === null ? "--:--" : formatRemaining(remaining)}</span>
+    <p
+      role="timer"
+      className="inline-flex items-center gap-2 rounded-xs bg-warning-soft px-3 py-1.5 font-brand-label text-overline font-semibold uppercase tracking-button tabular-nums text-warning-strong"
+    >
+      <ClockIcon width={16} height={16} />
+      <span>Slots held for {remaining === null ? "--:--" : formatRemaining(remaining)}</span>
     </p>
   );
 }

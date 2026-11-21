@@ -5,25 +5,26 @@ import { findByToken } from "@/lib/bookings";
 import { cancelBooking, type CancelState } from "@/lib/cancellations";
 import { sendAdminNewProof, sendProofReceived } from "@/lib/email";
 import {
+  checkContractBytes,
   checkProofBytes,
+  checkUploadTotal,
   expireStaleHolds,
   holdIsOpen,
   markPaymentReview,
+  removeContract,
   removeProof,
+  uploadContract,
   uploadProof,
   type ProofState,
 } from "@/lib/proofs";
-import { isGuestCancellable, manilaToday, normalizeGcashRef, statusLabel, type FieldErrors } from "@/lib/rules";
+import { isGuestCancellable, manilaToday, statusLabel, type FieldErrors } from "@/lib/rules";
 import type { Booking } from "@/lib/supabase";
 
-const REF_ERROR = "Enter the 13-digit reference number from your GCash receipt.";
-const DUPLICATE_ERROR = "This reference number was already used.";
-
-function fail(ref: string, errors: FieldErrors, message: string | null = null): ProofState {
-  return { errors, message, ref };
+function fail(errors: FieldErrors, message: string | null = null): ProofState {
+  return { errors, message };
 }
 
-async function showCurrentStatus(token: string, booking: Booking, ref: string): Promise<ProofState> {
+async function showCurrentStatus(token: string, booking: Booking): Promise<ProofState> {
   const wasStaleHold = booking.status === "awaiting_payment";
   if (wasStaleHold) {
     await expireStaleHolds();
@@ -32,7 +33,7 @@ async function showCurrentStatus(token: string, booking: Booking, ref: string): 
   const message = wasStaleHold
     ? "Your hold expired, so the slots were released. You can book again."
     : `This booking is now ${statusLabel(booking.status).toLowerCase()}.`;
-  return fail(ref, {}, message);
+  return fail({}, message);
 }
 
 async function readBytes(file: FormDataEntryValue | null): Promise<Uint8Array> {
@@ -49,52 +50,58 @@ async function sendProofEmails(booking: Booking): Promise<void> {
 }
 
 export async function submitProof(token: string, _previous: ProofState, formData: FormData): Promise<ProofState> {
-  const rawRef = String(formData.get("ref") ?? "").slice(0, 24);
   const booking = await findByToken(token);
   if (!booking) {
-    return fail(rawRef, {}, "We could not find this booking.");
+    return fail({}, "We could not find this booking.");
   }
   if (!holdIsOpen(booking)) {
-    return showCurrentStatus(token, booking, rawRef);
+    return showCurrentStatus(token, booking);
   }
 
   const errors: FieldErrors = {};
-  const ref = normalizeGcashRef(rawRef);
-  if (ref === null) {
-    errors.ref = REF_ERROR;
+  const proofBytes = await readBytes(formData.get("proof"));
+  const contractBytes = await readBytes(formData.get("contract"));
+  const proofCheck = checkProofBytes(proofBytes);
+  const contractCheck = checkContractBytes(contractBytes);
+  if (!proofCheck.ok) {
+    errors.proof = proofCheck.error;
   }
-  const bytes = await readBytes(formData.get("proof"));
-  const check = checkProofBytes(bytes);
-  if (!check.ok) {
-    errors.proof = check.error;
+  if (!contractCheck.ok) {
+    errors.contract = contractCheck.error;
   }
-  if (ref === null || !check.ok) {
-    return fail(rawRef, errors);
+  const totalError = checkUploadTotal(proofBytes.length, contractBytes.length);
+  if (totalError && proofCheck.ok && contractCheck.ok) {
+    errors.contract = totalError;
+  }
+  if (!proofCheck.ok || !contractCheck.ok || totalError) {
+    return fail(errors);
   }
 
-  const proofPath = await uploadProof(booking.id, bytes, check.image);
+  const proofPath = await uploadProof(booking.id, proofBytes, proofCheck.image);
   if (proofPath === null) {
-    return fail(rawRef, {}, "We could not upload your screenshot. Please try again.");
+    return fail({}, "We could not upload your screenshot. Please try again.");
+  }
+  const contractPath = await uploadContract(booking.id, contractBytes, contractCheck.file);
+  if (contractPath === null) {
+    await removeProof(proofPath);
+    return fail({}, "We could not upload your signed contract. Please try again.");
   }
 
-  const result = await markPaymentReview(booking.id, ref, proofPath);
+  const result = await markPaymentReview(booking.id, proofPath, contractPath);
   if (result.kind !== "submitted") {
-    await removeProof(proofPath);
-  }
-  if (result.kind === "duplicate") {
-    return fail(rawRef, { ref: DUPLICATE_ERROR });
+    await Promise.all([removeProof(proofPath), removeContract(contractPath)]);
   }
   if (result.kind === "error") {
-    return fail(rawRef, {}, "Something went wrong saving your payment proof. Please try again.");
+    return fail({}, "Something went wrong saving your payment proof. Please try again.");
   }
   if (result.kind === "stale") {
     const current = (await findByToken(token)) ?? booking;
-    return showCurrentStatus(token, current, rawRef);
+    return showCurrentStatus(token, current);
   }
 
   revalidatePath(`/b/${token}`);
   await sendProofEmails(result.booking);
-  return fail("", {});
+  return fail({});
 }
 
 const CANNOT_CANCEL = "This booking can no longer be cancelled online. Please message us.";

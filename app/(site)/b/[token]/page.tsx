@@ -6,6 +6,8 @@ import { holdIsOpen } from "@/lib/proofs";
 import { addDays, formatPeso, type BookingStatus } from "@/lib/rules";
 import { formatDayWithYear } from "@/lib/stay";
 import type { Booking } from "@/lib/supabase";
+import { PaymentStep } from "./payment-step";
+import { ReviewStep } from "./review-step";
 import { StatusSection } from "./status-sections";
 
 export const metadata: Metadata = {
@@ -58,7 +60,15 @@ export default async function BookingPage({ params }: BookingPageProps) {
   if (!booking) {
     notFound();
   }
-  const slotNames = booking.kind === "overnight" ? await bookingSlotLabels(booking) : [];
+  const slotNames = await bookingSlotLabels(booking);
+
+  if (booking.status === "awaiting_payment" && holdIsOpen(booking)) {
+    return <PaymentStep booking={booking} slotNames={slotNames} />;
+  }
+
+  if (booking.status === "payment_review") {
+    return <ReviewStep booking={booking} slotNames={slotNames} />;
+  }
 
   return (
     <div className="mx-auto flex max-w-reading flex-col gap-8 px-4 py-12 md:py-16">
@@ -76,9 +86,9 @@ export default async function BookingPage({ params }: BookingPageProps) {
         </h2>
         <dl className="divide-y divide-line">
           <Row label={booking.kind === "overnight" ? "Overnight stay" : "Day tour"}>{stayText(booking)}</Row>
-          {booking.kind === "overnight" ? <Row label="Slots">{slotNames.join(", ")}</Row> : null}
+          {slotNames.length > 0 ? <Row label="Slots">{slotNames.join(", ")}</Row> : null}
           <Row label="Guests">{guestsText(booking)}</Row>
-          {booking.kind === "overnight" ? (
+          {booking.kind === "overnight" || booking.tents > 0 ? (
             <Row label="Tents">{booking.tents > 0 ? plural(booking.tents, "tent", "tents") : "None"}</Row>
           ) : null}
         </dl>
@@ -92,7 +102,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
             <dd className="tabular-nums">{formatPeso(booking.downpayment)}</dd>
           </div>
           <div className="flex justify-between gap-4 text-ink-muted">
-            <dt>Balance at check-in</dt>
+            <dt>Balance</dt>
             <dd className="font-bold tabular-nums">{formatPeso(booking.balance)}</dd>
           </div>
         </dl>
