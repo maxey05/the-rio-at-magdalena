@@ -85,10 +85,10 @@ export async function PaymentStep({ booking, slotNames }: PaymentStepProps) {
                   <Image
                     src={qrUrl}
                     alt={`GCash QR code for ${details.gcashName}`}
-                    width={200}
-                    height={200}
+                    width={220}
+                    height={220}
                     unoptimized
-                    className="size-50 rounded-xs border border-sand-line bg-paper object-contain"
+                    className="size-55 rounded-xs border border-sand-line bg-paper object-contain"
                   />
                 </div>
                 <ol className="flex list-decimal flex-col gap-1.5 pl-6">
