@@ -56,7 +56,6 @@ function photo(
 }
 
 export type HomeHero = {
-  overline: string;
   headline: string;
   subheading: string;
   primaryAction: NavLink;
@@ -65,17 +64,17 @@ export type HomeHero = {
 };
 
 export const homeHero: HomeHero = {
-  overline: "Magdalena, Laguna",
-  headline: "Camp between two rivers.",
-  subheading: "4.5 hectares of raw farmland, open for overnight camping, day tours and intimate events.",
+  headline: "Experience remote living",
+  subheading: "Tucked away in Magdalena Laguna, The Rio is a raw 4.5 hectare farmland between two rivers.",
   primaryAction: { href: "/book", label: "Book a stay" },
   secondaryAction: { href: "/rates", label: "See rates" },
   photo: photo(
-    "hero-riverbank",
-    "The riverbank at golden hour",
-    "The riverbank at The Rio At Magdalena in golden evening light",
-    2000,
-    1200,
+    "hero-aerial",
+    "Aerial view of The Rio",
+    "Aerial view of The Rio at Magdalena: open farmland and tree cover held between two rivers",
+    1920,
+    1440,
+    "/photos/hero-aerial.webp",
   ),
 };
 
@@ -157,9 +156,9 @@ export const rateCards = buildRateCards(DEFAULT_SETTINGS);
 
 export const tentRental = {
   price: formatPeso(DEFAULT_SETTINGS.tentPrice),
-  unit: "per tent, per night",
+  unit: "per tent, per night (once for a day tour)",
   notes: [
-    "Tent rental is for overnight stays only.",
+    "You can rent tents for overnight stays and day tours. A day tour tent is charged once.",
     "Add the tents you want when you book. Availability is confirmed during booking.",
     "Pets are not allowed inside rented tents.",
   ],
@@ -209,7 +208,6 @@ export const onSiteFees = {
   items: [
     `${formatPeso(300)} trash fee if you leave your trash behind. Bring your own trash bag.`,
     "A refundable security deposit at check-in. The amount is confirmed at check-in.",
-    "The balance of your booking (the other 50%) is paid at check-in.",
   ],
 } as const;
 
@@ -217,7 +215,7 @@ export const paymentSummary: readonly string[] = [
   `Pay ${DEFAULT_SETTINGS.downpaymentPct}% as a downpayment by GCash when you book, rounded up to the nearest peso.`,
   `Your slots are held for ${DEFAULT_SETTINGS.holdMinutes} minutes while you pay and upload your GCash reference number and a screenshot.`,
   "We check your payment and confirm your booking by email.",
-  "Pay the remaining balance at check-in.",
+  "Pay the remaining balance a day before you arrive.",
 ];
 
 export const cancellationSummary: readonly string[] = [
@@ -236,7 +234,7 @@ export const bookingSteps: readonly BookingStep[] = [
   { title: "Pick dates and slot", detail: "Choose overnight or a day tour, your dates and your camp slot." },
   { title: "Pay 50% via GCash", detail: "Send the downpayment and upload your GCash reference and screenshot." },
   { title: "We confirm by email", detail: "We check your payment and send your confirmation." },
-  { title: "Pay the rest at check-in", detail: "Settle the balance when you arrive, and bring a valid ID." },
+  { title: "Pay the rest before you arrive", detail: "Settle the balance a day before your visit, and bring a valid ID at check-in." },
 ];
 
 export const goodToKnow: readonly string[] = [
@@ -273,11 +271,12 @@ export const camps: readonly Camp[] = [
       "Two sets of stairs, one of them near slot A",
     ],
     cardPhoto: photo(
-      "camp-1-trees",
-      "Camp 1 on the cliff top",
-      "Tents pitched along the riverbank cliff at Camp 1",
+      "camp-1-tents",
+      "Camp 1",
+      "Two tents pitched on the grass under tall trees at Camp 1",
+      1201,
       1600,
-      1200,
+      "/photos/camp-1-tents.webp",
     ),
     aerial: photo(
       "camp-1-aerial",
@@ -301,11 +300,12 @@ export const camps: readonly Camp[] = [
     ],
     nearby: ["Two sets of stairs up the slope", "Restroom (CR) details for Camp 2 coming soon"],
     cardPhoto: photo(
-      "camp-2-river",
-      "Camp 2 by the water",
-      "Camp 2 on the low ground beside the river",
-      1600,
-      1200,
+      "camp-2-trees",
+      "Camp 2",
+      "Tents and a shared canopy under tall, slender trees at Camp 2",
+      1440,
+      1440,
+      "/photos/camp-2-trees.webp",
     ),
     aerial: photo(
       "camp-2-aerial",
@@ -387,7 +387,7 @@ export const whatToBring: readonly string[] = [
   "Towel and a change of clothes",
   "Sunscreen and a hat",
   "A leash and what your pet needs, if you bring one",
-  "Your balance and security deposit for check-in",
+  "Your security deposit for check-in",
 ];
 
 export type FaqItem = {
@@ -423,7 +423,7 @@ export const faq: readonly FaqItem[] = [
   },
   {
     question: "How do I pay?",
-    answer: `You pay ${DEFAULT_SETTINGS.downpaymentPct}% by GCash when you book and the rest at check-in. A refundable security deposit is also collected at check-in, and the amount is confirmed then.`,
+    answer: `You pay ${DEFAULT_SETTINGS.downpaymentPct}% by GCash when you book and the rest a day before you arrive. A refundable security deposit is also collected at check-in, and the amount is confirmed then.`,
   },
   {
     question: "Can I cancel my booking?",
@@ -437,7 +437,7 @@ export const faq: readonly FaqItem[] = [
   },
   {
     question: "Can I rent a tent?",
-    answer: `Yes, for overnight stays only. A tent is ${formatPeso(DEFAULT_SETTINGS.tentPrice)} per tent per night. Add the tents you want when you book.`,
+    answer: `Yes, for overnight stays and day tours. A tent is ${formatPeso(DEFAULT_SETTINGS.tentPrice)} per tent per night, or once for a day tour. Add the tents you want when you book.`,
   },
   {
     question: "How many people fit in a slot?",
@@ -508,7 +508,22 @@ export const eventsContent = {
     "We reply to confirm details and what is possible.",
     "Sending an inquiry does not hold or block a date until we agree on the details.",
   ],
-  formNotice: "Inquiry form coming soon. For now, message us on Facebook.",
+  formNotice: "Prefer Facebook? Message us there instead.",
+  form: {
+    intro: "Tell us about your plan and we will reply by email or text.",
+    thankYou: "Thank you! We'll reply within 1-2 days by email or text.",
+    submit: "Send inquiry",
+    sending: "Sending...",
+    typePlaceholder: "Choose one",
+    messageHint: "10 to 1000 characters. Share what you have in mind, the mood and anything we should know.",
+    dateHint: "Optional. Sending an inquiry does not hold the date.",
+    consentLead: "I agree to the",
+    consentLink: "privacy notice",
+    consentTail: "and that The Rio may contact me about this inquiry.",
+    limitReached:
+      "We already have 3 inquiries from this email today. We'll reply soon, so please try again tomorrow or message us on Facebook.",
+    failed: "We could not send your inquiry. Please try again, or message us on Facebook.",
+  },
   photo: photo(
     "events-riverside",
     "Riverside events",
@@ -525,7 +540,7 @@ export const bookPage = {
 } as const;
 
 export const closingCta = {
-  headline: "The river's waiting.",
+  headline: "Experience Magdalena",
   body: "Pick your dates, choose your slot and come camp between two rivers.",
 } as const;
 
@@ -594,4 +609,200 @@ export const privacy: Privacy = {
       ],
     },
   ],
+};
+
+export const homePhotos = {
+  aerial: photo(
+    "home-aerial",
+    "Aerial view of the farmland",
+    "Aerial view of the farmland and the two rivers at The Rio",
+    1920,
+    1440,
+    "/photos/hero-aerial.webp",
+  ),
+  riverRocks: photo(
+    "home-river-rocks",
+    "The rocky river",
+    "The rocky riverbed at The Rio under a bright sky, with hills in the distance",
+    1200,
+    1600,
+    "/photos/river-rocks.webp",
+  ),
+  campsiteSunset: photo(
+    "home-campsite-sunset",
+    "Sunset at the camp",
+    "Camp chairs and a table under a canopy at sunset, with tents and trees in the background",
+    1200,
+    1600,
+    "/photos/campsite-sunset.webp",
+  ),
+  tentsTree: photo(
+    "home-tents-tree",
+    "Tents under the tree",
+    "Tents and canopies under a large tree in the morning light",
+    1600,
+    1200,
+    "/photos/tents-tree.webp",
+  ),
+  horse: photo(
+    "home-horse",
+    "A horse in the field",
+    "A horse grazing in the green field among the trees",
+    1200,
+    1600,
+    "/photos/horse-field.webp",
+  ),
+  dog: photo(
+    "home-dog",
+    "A farm dog",
+    "A small dog standing on a table between two big bunches of green bananas",
+    960,
+    960,
+    "/photos/dog-bananas.webp",
+  ),
+  fruitTree: photo(
+    "home-fruit-tree",
+    "The fruit trees",
+    "A hand reaching for a large round green fruit on one of the farm's fruit trees",
+    1200,
+    1600,
+    "/photos/fruit-tree.webp",
+  ),
+};
+
+export type HomeIntroBlock = {
+  overline?: string;
+  title?: string;
+  paragraphs: readonly string[];
+  link: NavLink;
+  photo: Photo;
+};
+
+export const homeIntro: { first: HomeIntroBlock; second: HomeIntroBlock } = {
+  first: {
+    overline: "Welcome to The Rio",
+    title: "Slow down where two rivers meet",
+    paragraphs: [
+      "Two hours south of Metro Manila lies the serene Rio at Magdalena. The Rio spans 4.5 hectares of open farmland in Magdalena, Laguna, held on both sides by moving rivers.",
+      "Escape the hustle and bustle of the city and experience quiet, remote farm life across our two camps.",
+      "Rest under the shade of tall trees, take in the long view from the riverbank cliff, or simply listen to the sound of the river from your tent. There's much to enjoy at The Rio.",
+    ],
+    link: { href: "/camps", label: "See the camps" },
+    photo: homePhotos.riverRocks,
+  },
+  second: {
+    paragraphs: [
+      "Have your fill of adventure for the day: run along the riverbed, maybe climb a tree, or roast some marshmallows by the fire. The Rio brings campers back to the basics, giving everyone room to reconnect with nature.",
+      "Most importantly, our goal is to bring family and friends together. The Rio promises unforgettable experiences for every camper to take home.",
+    ],
+    link: { href: "/rates", label: "See rates" },
+    photo: homePhotos.campsiteSunset,
+  },
+};
+
+export const homeCamps = {
+  overline: "The camps",
+  action: "Explore",
+};
+
+export type HomeGalleryTile = {
+  photo: Photo;
+  position?: string;
+  layout: string;
+};
+
+export const homeGallery: {
+  overline: string;
+  title: string;
+  action: NavLink;
+  tiles: readonly HomeGalleryTile[];
+} = {
+  overline: "Gallery",
+  title: "The Rio, up close",
+  action: { href: "/gallery", label: "See all photos" },
+  tiles: [
+    {
+      photo: homePhotos.aerial,
+      layout: "col-span-2 row-span-2 md:col-[1/3] md:row-[1/3]",
+    },
+    { photo: homePhotos.tentsTree, layout: "md:col-[3/4] md:row-[1/2]" },
+    { photo: homePhotos.riverRocks, layout: "row-span-2 md:col-[4/5] md:row-[1/3]" },
+    { photo: homePhotos.horse, position: "center 70%", layout: "md:col-[3/4] md:row-[2/3]" },
+    { photo: homePhotos.dog, position: "center 45%", layout: "md:col-[1/2] md:row-[3/4]" },
+    { photo: homePhotos.campsiteSunset, position: "center 45%", layout: "col-span-2 md:col-[2/4] md:row-[3/4]" },
+    { photo: homePhotos.fruitTree, position: "center 42%", layout: "md:col-[4/5] md:row-[3/4]" },
+  ],
+};
+
+export type GoogleReview = {
+  name: string;
+  avatar: string;
+  when: string;
+  rating: number;
+  quote?: string;
+};
+
+export const googleReviews: {
+  overline: string;
+  title: string;
+  written: readonly GoogleReview[];
+  ratingsOnly: readonly GoogleReview[];
+  readMore: NavLink;
+  write: NavLink;
+} = {
+  overline: "Google reviews",
+  title: "What campers say",
+  written: [
+    {
+      name: "Adi",
+      avatar: "/reviews/avatar-adi.png",
+      when: "6 months ago",
+      rating: 5,
+      quote:
+        "Good place for campsite recommended kahit may kids very safe naman sa experience namin also best spot din for astrophotography",
+    },
+    {
+      name: "Rhonel Amba",
+      avatar: "/reviews/avatar-rhonel.png",
+      when: "7 months ago",
+      rating: 5,
+      quote: "Very relaxing and peaceful place. good for camping",
+    },
+  ],
+  ratingsOnly: [
+    { name: "Randy Morales Festin", avatar: "/reviews/avatar-randy.png", when: "14 hours ago", rating: 5 },
+    { name: "jowell hermina", avatar: "/reviews/avatar-jowell.png", when: "a year ago", rating: 5 },
+  ],
+  readMore: { href: "#reviews", label: "See more reviews" },
+  write: { href: "#reviews", label: "Write a review" },
+};
+
+export const homeLocation = {
+  overline: "Location",
+  title: "Find us in Magdalena, Laguna",
+};
+
+export type FooterContact = {
+  label: string;
+  href: string;
+};
+
+export const footerContent = {
+  contactTitle: "Contact information",
+  emails: [
+    { label: "therioatmagdalena.booking@gmail.com", href: "mailto:therioatmagdalena.booking@gmail.com" },
+  ] as readonly FooterContact[],
+  phone: { label: "[+63 9XX XXX XXXX]", href: "tel:+630000000000" } as FooterContact,
+  address: "6FF6+M8, [Barangay], Magdalena, Laguna, Philippines",
+  exploreTitle: "Explore",
+  exploreLinks: [
+    { href: "/", label: "Home" },
+    { href: "/camps", label: "Camps" },
+    { href: "/rates", label: "Rates" },
+    { href: "/rules", label: "Rules & FAQ" },
+    { href: "/getting-there", label: "Getting there" },
+    { href: "/gallery", label: "Gallery" },
+    { href: "/events", label: "Events & prenup shoots" },
+    { href: "/book", label: "Book a stay" },
+  ] as readonly NavLink[],
 };
