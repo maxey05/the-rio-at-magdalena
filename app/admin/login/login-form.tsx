@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/button";
 import { Field } from "@/components/field";
+import { TopLoadingBar } from "@/components/top-loading-bar";
 import { login, type LoginState } from "./actions";
 
 const initialState: LoginState = { error: null, email: "" };
@@ -17,6 +18,7 @@ export function LoginForm() {
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-5">
+      <TopLoadingBar active={pending} />
       <Field
         id="login-email"
         name="email"
