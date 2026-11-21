@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/button";
 import { TextAreaField } from "@/components/field";
 import { CheckIcon, InfoIcon } from "@/components/icons";
+import { TopLoadingBar } from "@/components/top-loading-bar";
 import type { AdminActionState } from "@/lib/admin";
 import type { InquiryStatus } from "@/lib/supabase";
 import { saveNote, setInquiryStatus } from "./actions";
@@ -35,6 +36,7 @@ export function StatusControls({ inquiryId, expected, choices }: StatusControlsP
   const [state, formAction, pending] = useActionState(setInquiryStatus, initialState);
   return (
     <form action={formAction} className="flex flex-col gap-2">
+      <TopLoadingBar active={pending} />
       <input type="hidden" name="inquiryId" value={inquiryId} />
       <input type="hidden" name="expected" value={expected} />
       <div className="flex flex-wrap gap-3">
@@ -61,6 +63,7 @@ export function NoteForm({ inquiryId, note }: { inquiryId: string; note: string 
   const [state, formAction, pending] = useActionState(saveNote, initialState);
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      <TopLoadingBar active={pending} />
       <input type="hidden" name="inquiryId" value={inquiryId} />
       <TextAreaField
         id={`note-${inquiryId}`}
