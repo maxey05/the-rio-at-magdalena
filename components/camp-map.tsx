@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { CampMapArt } from "@/components/camp-map-art";
 import { CampMapOverlay } from "@/components/camp-map-overlay";
 import { LABEL, SECTION_TITLE } from "@/components/brand-styles";
@@ -12,6 +12,7 @@ type CampMapProps = {
   selected: readonly number[];
   slotCapacity: number;
   note: string | null;
+  hint?: string | null;
   onToggle: (id: number) => void;
 };
 
@@ -44,8 +45,52 @@ function pinStyle(state: "selected" | "taken" | "free" | "idle"): string {
   return "border-2 border-olive-strong bg-cream-light text-earth shadow-sm hover:scale-110";
 }
 
-export function CampMap({ slots, selected, slotCapacity, note, onToggle }: CampMapProps) {
+type HintTip = { x: number; y: number; flipX: boolean; flipY: boolean };
+
+export function CampMap({ slots, selected, slotCapacity, note, hint = null, onToggle }: CampMapProps) {
   const [focusId, setFocusId] = useState<number | null>(null);
+  const [tip, setTip] = useState<HintTip | null>(null);
+  const hideTimer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (hideTimer.current !== null) {
+        window.clearTimeout(hideTimer.current);
+      }
+    },
+    [],
+  );
+
+  function placeTip(event: PointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    setTip({ x, y, flipX: x > rect.width / 2, flipY: y > rect.height / 2 });
+  }
+
+  function moveHint(event: PointerEvent<HTMLDivElement>) {
+    if (hint && event.pointerType !== "touch") {
+      placeTip(event);
+    }
+  }
+
+  function leaveHint(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "touch") {
+      setTip(null);
+    }
+  }
+
+  function tapHint(event: PointerEvent<HTMLDivElement>) {
+    if (!hint || event.pointerType !== "touch") {
+      return;
+    }
+    placeTip(event);
+    if (hideTimer.current !== null) {
+      window.clearTimeout(hideTimer.current);
+    }
+    hideTimer.current = window.setTimeout(() => setTip(null), 2000);
+  }
+
   const pins = slots?.filter((slot) => PIN_POSITIONS[slot.code] !== undefined) ?? null;
   const focus = slots?.find((slot) => slot.id === (focusId ?? selected[0])) ?? null;
 
@@ -71,7 +116,12 @@ export function CampMap({ slots, selected, slotCapacity, note, onToggle }: CampM
       </div>
 
       <div className="overflow-x-auto">
-        <div className="relative aspect-[1000/600] min-w-150 overflow-hidden rounded-xs bg-map-ground">
+        <div
+          onPointerMove={moveHint}
+          onPointerLeave={leaveHint}
+          onPointerDown={tapHint}
+          className="relative aspect-[1000/600] min-w-150 overflow-hidden rounded-xs bg-map-ground"
+        >
           <CampMapArt />
           <CampMapOverlay activeCamp={focus?.camp ?? null} />
           {pins
@@ -109,6 +159,19 @@ export function CampMap({ slots, selected, slotCapacity, note, onToggle }: CampM
                   {code}
                 </span>
               ))}
+          {hint && tip ? (
+            <span
+              aria-hidden="true"
+              style={{
+                left: tip.x,
+                top: tip.y,
+                transform: `translate(${tip.flipX ? "calc(-100% - 14px)" : "14px"}, ${tip.flipY ? "calc(-100% - 14px)" : "14px"})`,
+              }}
+              className="pointer-events-none absolute z-10 whitespace-nowrap rounded-xs bg-earth px-3 py-2 font-brand-body text-base font-semibold text-cream shadow-float"
+            >
+              {hint}
+            </span>
+          ) : null}
         </div>
       </div>
 
