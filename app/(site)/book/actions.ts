@@ -67,11 +67,11 @@ function guestsFrom(formData: FormData): GuestCounts | null {
   return { adults, seniors, kids, infants };
 }
 
-async function describeFailure(failure: CreateFailure): Promise<ReserveFailure> {
+async function describeFailure(failure: CreateFailure, kind: StayKind): Promise<ReserveFailure> {
   if (failure.code === "slot_taken") {
     const [label] = failure.slotId ? await slotLabels([failure.slotId]) : [];
     const which = label ?? "one of your slots";
-    return fail(`Someone just booked ${which} for one of your nights. Pick another slot.`, "slots");
+    return fail(`Someone just booked ${which} for ${kind === "day_tour" ? "your date" : "one of your nights"}. Pick another slot.`, "slots");
   }
   if (failure.code === "site_full") {
     return fail(`We're full on ${formatDay(failure.date)}. Pick other dates.`, "dates");
@@ -114,7 +114,7 @@ export async function reserve(formData: FormData): Promise<ReserveFailure> {
   const checkIn = text(formData, "checkIn");
 
   const guests = guestsFrom(formData);
-  const tents = kind === "overnight" ? count(formData, "tents") : 0;
+  const tents = count(formData, "tents");
   if (guests === null || tents === null) {
     return fail("Check the number of guests and tents.", "guests");
   }
@@ -126,21 +126,19 @@ export async function reserve(formData: FormData): Promise<ReserveFailure> {
     return fail(`We have ${settings.tentStock} tents in total. Choose fewer tents.`, "guests");
   }
 
-  const slotIds = kind === "overnight" ? slotIdsFrom(formData) : [];
+  const slotIds = slotIdsFrom(formData);
   if (slotIds === null) {
     return fail("Check the slots you chose.", "slots");
   }
-  if (kind === "overnight") {
-    if (slotIds.length === 0) {
-      return fail("Choose at least one slot.", "slots");
-    }
-    const capacity = checkSlotCapacity(guestTotal, slotIds.length, settings);
-    if (!capacity.ok) {
-      return fail(`${guestTotal} guests need at least ${capacity.neededSlots} slots. Add a slot.`, "slots");
-    }
-    if ((await countActiveSlots(slotIds)) !== slotIds.length) {
-      return fail("One of the slots you chose is not available. Pick another slot.", "slots");
-    }
+  if (slotIds.length === 0) {
+    return fail("Choose at least one slot.", "slots");
+  }
+  const capacity = checkSlotCapacity(guestTotal, slotIds.length, settings);
+  if (!capacity.ok) {
+    return fail(`${guestTotal} guests need at least ${capacity.neededSlots} slots. Add a slot.`, "slots");
+  }
+  if ((await countActiveSlots(slotIds)) !== slotIds.length) {
+    return fail("One of the slots you chose is not available. Pick another slot.", "slots");
   }
 
   const details = validateDetails({
@@ -171,7 +169,7 @@ export async function reserve(formData: FormData): Promise<ReserveFailure> {
     quote,
   });
   if (!result.ok) {
-    return describeFailure(result);
+    return describeFailure(result, kind);
   }
   redirect(`/b/${result.token}`);
 }
