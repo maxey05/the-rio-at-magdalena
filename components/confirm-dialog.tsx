@@ -4,6 +4,7 @@ import { startTransition, useActionState, useEffect, useId, useRef, type FormEve
 import { Button } from "@/components/button";
 import { CheckboxField, Field, TextAreaField } from "@/components/field";
 import { InfoIcon } from "@/components/icons";
+import { TopLoadingBar } from "@/components/top-loading-bar";
 import type { AdminActionState } from "@/lib/admin";
 
 export type DialogField =
@@ -106,6 +107,7 @@ export function ConfirmDialog({
         className="m-auto w-[calc(100%-2rem)] max-w-md rounded-card border border-line bg-surface p-0 text-ink backdrop:bg-ink/60"
       >
         <form ref={formRef} onSubmit={submit} noValidate aria-busy={pending} className="flex flex-col gap-4 p-5 md:p-6">
+          <TopLoadingBar active={pending} />
           <h2 id={`${id}-title`} className="font-sans text-h3 font-bold">
             {title}
           </h2>
