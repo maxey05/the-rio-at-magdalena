@@ -57,6 +57,6 @@ insert into settings (
   true,
   500, 350, 300, 200,
   500, 5, 10, 100,
-  90, 7, 30, 50
+  90, 30, 30, 50
 )
 on conflict (id) do nothing;

@@ -13,7 +13,8 @@
 --
 -- `email_log` (RFC-007) and `inquiries` (RFC-014) are at the end of the table
 -- definitions. supabase/migrations/014-inquiries.sql adds `inquiries` to a
--- database that was set up before RFC-014.
+-- database that was set up before RFC-014. supabase/migrations/015-signed-contracts.sql
+-- adds `bookings.contract_path` and the signed-contracts bucket to an older database.
 
 create extension if not exists pgcrypto;
 
@@ -62,7 +63,7 @@ create table if not exists settings (
   slot_capacity smallint not null default 10,
   site_cap smallint not null default 100,
   window_days smallint not null default 90,
-  max_nights smallint not null default 7,
+  max_nights smallint not null default 30,
   hold_minutes smallint not null default 30,
   downpayment_pct smallint not null default 50 check (downpayment_pct between 1 and 100),
   gcash_name text,
@@ -126,6 +127,7 @@ create table if not exists bookings (
   gcash_ref text,
   proof_path text,
   proof_submitted_at timestamptz,
+  contract_path text,
   decided_at timestamptz,
   decided_by text,
   reject_reason text,
@@ -140,7 +142,7 @@ create table if not exists bookings (
   refund_ref text,
   refunded_at timestamptz,
   created_at timestamptz not null default now(),
-  check ((kind = 'day_tour' and nights = 0 and tents = 0) or (kind = 'overnight' and nights >= 1)),
+  constraint bookings_kind_nights_check check ((kind = 'day_tour' and nights = 0) or (kind = 'overnight' and nights >= 1)),
   check (guests >= 1)
 );
 
@@ -310,7 +312,7 @@ $$;
 --   guests      overnight guests staying the night of d (check_in <= d < check_out)
 --               plus day-tour guests on d (D-012, D-014). Active bookings only.
 --   slots_taken slots held for the night of d. Active bookings only.
---   tents       tents in use the night of d.
+--   tents       tents in use the night of d, plus tents of day tours on d.
 --   closed      true if any closure covers d.
 -- ---------------------------------------------------------------------------
 create or replace function occupancy_between(p_from date, p_to date)
@@ -338,9 +340,8 @@ as $$
       select sum(b.tents)
         from bookings b
        where is_active(b)
-         and b.kind = 'overnight'
-         and g.d::date >= b.check_in
-         and g.d::date < b.check_out
+         and ((b.kind = 'overnight' and g.d::date >= b.check_in and g.d::date < b.check_out)
+           or (b.kind = 'day_tour' and b.check_in = g.d::date))
     ), 0)::int,
     exists (
       select 1 from closures c
@@ -367,8 +368,7 @@ $$;
 --
 -- Errors (the exception message is the machine-readable code):
 --   invalid_input         missing or inconsistent kind / date / nights / tents / guests
---   day_tour_slots        a day tour must have no slots (D-014)
---   slots_required        an overnight booking needs at least one slot
+--   slots_required        every booking, overnight or day tour, needs at least one slot
 --   slot_invalid          a slot does not exist, is inactive, or its camp is inactive
 --   slot_capacity         guests exceed settings.slot_capacity x number of slots (D-011)
 --   closed                a night of the stay (or the day-tour date) is closed
@@ -377,7 +377,8 @@ $$;
 --   slot_taken            another booking holds a chosen slot on a chosen night
 --                         (DETAIL says "slot_id=<id> night=<date>")
 --
--- A stay of N nights occupies the nights check_in .. check_in + N - 1. The
+-- A day tour holds its slots for its own date only (one booking_nights row per
+-- slot). A stay of N nights occupies the nights check_in .. check_in + N - 1. The
 -- check-out morning is not an occupied night, so a closure starting on the
 -- check-out date does not block the stay, and a new stay may start that day.
 -- ---------------------------------------------------------------------------
@@ -419,7 +420,7 @@ begin
      or v_guests < 1
      or v_nights < 0
      or v_tents < 0
-     or (v_kind = 'day_tour' and (v_nights <> 0 or v_tents <> 0))
+     or (v_kind = 'day_tour' and v_nights <> 0)
      or (v_kind = 'overnight' and v_nights < 1) then
     raise exception 'invalid_input';
   end if;
@@ -431,30 +432,28 @@ begin
       case when jsonb_typeof(p->'slot_ids') = 'array' then p->'slot_ids' else '[]'::jsonb end
     ) as x;
 
+  if cardinality(v_slots) = 0 then
+    raise exception 'slots_required';
+  end if;
+
+  select count(*) into v_found
+    from slots sl
+    join camps c on c.id = sl.camp_id
+   where sl.id = any(v_slots)
+     and sl.active
+     and c.active;
+  if v_found <> cardinality(v_slots) then
+    raise exception 'slot_invalid';
+  end if;
+
+  if v_guests > s.slot_capacity * cardinality(v_slots) then
+    raise exception 'slot_capacity';
+  end if;
+
+  -- A day tour holds its slots only for its own date.
   if v_kind = 'day_tour' then
-    if cardinality(v_slots) > 0 then
-      raise exception 'day_tour_slots';
-    end if;
     v_last := v_in;
   else
-    if cardinality(v_slots) = 0 then
-      raise exception 'slots_required';
-    end if;
-
-    select count(*) into v_found
-      from slots sl
-      join camps c on c.id = sl.camp_id
-     where sl.id = any(v_slots)
-       and sl.active
-       and c.active;
-    if v_found <> cardinality(v_slots) then
-      raise exception 'slot_invalid';
-    end if;
-
-    if v_guests > s.slot_capacity * cardinality(v_slots) then
-      raise exception 'slot_capacity';
-    end if;
-
     v_last := v_in + v_nights - 1;
   end if;
 
@@ -471,7 +470,7 @@ begin
     raise exception 'site_full:%', to_char(v_d, 'YYYY-MM-DD');
   end if;
 
-  if v_kind = 'overnight' and v_tents > 0 then
+  if v_tents > 0 then
     select o.d into v_d
       from occupancy_between(v_in, v_last) o
      where o.tents + v_tents > s.tent_stock
@@ -503,25 +502,24 @@ begin
   returning bookings.id, bookings.ref, bookings.access_token
   into id, ref, access_token;
 
-  if v_kind = 'overnight' then
-    begin
-      -- All slot x night rows in one statement; the primary key rejects any
-      -- slot and night that is already held.
-      insert into booking_nights (booking_id, slot_id, night)
-      select id, sl, n::date
-        from unnest(v_slots) as sl
-       cross join generate_series(v_in::timestamp, v_last::timestamp, interval '1 day') as n;
-    exception when unique_violation then
-      select bn.slot_id, bn.night into v_slot, v_night
-        from booking_nights bn
-       where bn.slot_id = any(v_slots)
-         and bn.night between v_in and v_last
-       order by bn.night, bn.slot_id
-       limit 1;
-      raise exception 'slot_taken'
-        using detail = format('slot_id=%s night=%s', v_slot, v_night);
-    end;
-  end if;
+  begin
+    -- All slot x night rows in one statement; the primary key rejects any
+    -- slot and night that is already held. A day tour writes one row per
+    -- slot, for its own date.
+    insert into booking_nights (booking_id, slot_id, night)
+    select id, sl, n::date
+      from unnest(v_slots) as sl
+     cross join generate_series(v_in::timestamp, v_last::timestamp, interval '1 day') as n;
+  exception when unique_violation then
+    select bn.slot_id, bn.night into v_slot, v_night
+      from booking_nights bn
+     where bn.slot_id = any(v_slots)
+       and bn.night between v_in and v_last
+     order by bn.night, bn.slot_id
+     limit 1;
+    raise exception 'slot_taken'
+      using detail = format('slot_id=%s night=%s', v_slot, v_night);
+  end;
 
   return next;
 end;
@@ -562,6 +560,13 @@ $$;
 -- ---------------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('payment-proofs', 'payment-proofs', false, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'signed-contracts', 'signed-contracts', false, 5242880,
+  array['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+)
 on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public)

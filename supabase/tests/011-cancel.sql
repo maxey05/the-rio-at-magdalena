@@ -311,11 +311,11 @@ begin
     v_n := pg_temp.refund_bk(v_a, '1111111111111');
     res := res || pg_temp.ln('gcash_ref: the refund on the cancelled booking can still be recorded', v_n = 1, v_n::text);
 
-    -- Day tours have no booking_nights and cancel cleanly.
-    v_a := pg_temp.mk(pg_temp.pl(null, '2099-11-10', 0, 4, 0, 'day_tour'), 'confirmed');
-    v_b := pg_temp.mk(pg_temp.pl(null, '2099-11-11', 0, 3, 0, 'day_tour'));
+    -- Day tours hold one slot for their own date and cancel cleanly.
+    v_a := pg_temp.mk(pg_temp.pl(array[t1], '2099-11-10', 0, 4, 0, 'day_tour'), 'confirmed');
+    v_b := pg_temp.mk(pg_temp.pl(array[t1], '2099-11-11', 0, 3, 0, 'day_tour'));
     select count(*) into v_n from booking_nights where booking_id in (v_a, v_b);
-    res := res || pg_temp.ln('day tour: it has no booking_nights before the cancel', v_n = 0, v_n::text);
+    res := res || pg_temp.ln('day tour: each holds one booking_nights row before the cancel', v_n = 2, v_n::text);
     select o.guests into v_n from occupancy_between('2099-11-10', '2099-11-10') o;
     res := res || pg_temp.ln('day tour: it counts 4 guests on Nov 10 before the cancel', v_n = 4, v_n::text);
     v_txt := pg_temp.cancel_bk(v_a, 'guest', null);
@@ -325,6 +325,8 @@ begin
       v_row.status = 'cancelled' and v_row.cancelled_by = 'guest' and v_row.refund_status = 'due', v_row.status);
     select o.guests into v_n from occupancy_between('2099-11-10', '2099-11-10') o;
     res := res || pg_temp.ln('day tour: Nov 10 shows 0 guests after the cancel', v_n = 0, v_n::text);
+    select count(*) into v_n from booking_nights where booking_id = v_a;
+    res := res || pg_temp.ln('day tour: cancelling it frees its slot', v_n = 0, v_n::text);
     v_txt := pg_temp.cancel_bk(v_b, 'admin', 'Closed for bad weather');
     res := res || pg_temp.ln('day tour: cancelling an awaiting_payment one returns awaiting_payment', v_txt = 'awaiting_payment', v_txt);
     select * into v_row from bookings where id = v_b;

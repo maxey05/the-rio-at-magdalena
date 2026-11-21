@@ -173,11 +173,11 @@ begin
     -- Site cap (20 in this test), day tours count.
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-06-10', 1, 10));
     res := res || pg_temp.ln('site_full: overnight 10 guests on Jun 10 succeeds', v_txt = 'ok', v_txt);
-    v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-06-10', 0, 8, 0, 'day_tour'));
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t3], '2099-06-10', 0, 8, 0, 'day_tour'));
     res := res || pg_temp.ln('site_full: day tour of 8 on Jun 10 succeeds (18 of 20)', v_txt = 'ok', v_txt);
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t2], '2099-06-10', 1, 3));
     res := res || pg_temp.ln('site_full: overnight of 3 more is refused with the date (day tour counted)', v_txt = 'site_full:2099-06-10', v_txt);
-    v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-06-10', 0, 3, 0, 'day_tour'));
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t4], '2099-06-10', 0, 3, 0, 'day_tour'));
     res := res || pg_temp.ln('site_full: a day tour of 3 more is refused too', v_txt = 'site_full:2099-06-10', v_txt);
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t2], '2099-06-09', 2, 3));
     res := res || pg_temp.ln('site_full: a stay whose second night is full reports that night', v_txt = 'site_full:2099-06-10', v_txt);
@@ -186,7 +186,7 @@ begin
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t3], '2099-06-11', 1, 3));
     res := res || pg_temp.ln('site_full: the day before/after is not affected', v_txt = 'ok', v_txt);
     select o.guests, o.slots_taken into v_row from occupancy_between('2099-06-10', '2099-06-10') o;
-    res := res || pg_temp.ln('occupancy_between: Jun 10 = 20 guests, 2 slots taken', v_row.guests = 20 and v_row.slots_taken = 2, v_row::text);
+    res := res || pg_temp.ln('occupancy_between: Jun 10 = 20 guests, 3 slots taken (2 overnight + 1 day tour)', v_row.guests = 20 and v_row.slots_taken = 3, v_row::text);
     select count(*) into v_n from occupancy_between('2099-06-09', '2099-06-12');
     res := res || pg_temp.ln('occupancy_between: returns one row per date, both ends included', v_n = 4, v_n::text);
 
@@ -208,7 +208,7 @@ begin
     res := res || pg_temp.ln('closed: stay whose second night is closed is refused', v_txt = 'closed', v_txt);
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-08-11', 1));
     res := res || pg_temp.ln('closed: stay on the last closed date is refused (end date inclusive)', v_txt = 'closed', v_txt);
-    v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-08-10', 0, 2, 0, 'day_tour'));
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-08-10', 0, 2, 0, 'day_tour'));
     res := res || pg_temp.ln('closed: day tour on a closed date is refused', v_txt = 'closed', v_txt);
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-08-08', 2));
     res := res || pg_temp.ln('closed: stay checking out on the first closed date is allowed', v_txt = 'ok', v_txt);
@@ -296,17 +296,47 @@ begin
     res := res || pg_temp.ln('gcash_ref: the ref can be reused once the first booking is cancelled', v_txt = '00000', v_txt);
 
     -- Guards inside create_booking.
-    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-10', 0, 15, 0, 'day_tour'));
-    res := res || pg_temp.ln('guard: day tour with a slot is refused', v_txt = 'day_tour_slots', v_txt);
-    v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-02-10', 0, 15, 0, 'day_tour'));
-    res := res || pg_temp.ln('guard: day tour of 15 on a quiet date succeeds (no slot limit)', v_txt = 'ok', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-10', 0, 8, 0, 'day_tour'));
+    res := res || pg_temp.ln('guard: day tour with a slot succeeds', v_txt = 'ok', v_txt);
     select count(*) into v_n from booking_nights bn join bookings b on b.id = bn.booking_id
-      where b.kind = 'day_tour' and b.check_in = '2099-02-10';
-    res := res || pg_temp.ln('guard: a day tour creates no booking_nights', v_n = 0, v_n::text);
-    v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-02-11', 1, 2, 0, 'day_tour'));
+      where b.kind = 'day_tour' and b.check_in = '2099-02-10' and bn.night = '2099-02-10' and bn.slot_id = t1;
+    res := res || pg_temp.ln('guard: a day tour holds its slot for its own date only (one booking_nights row)', v_n = 1, v_n::text);
+    v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-02-13', 0, 2, 0, 'day_tour'));
+    res := res || pg_temp.ln('guard: day tour with slot_ids missing is refused', v_txt = 'slots_required', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[]::smallint[], '2099-02-13', 0, 2, 0, 'day_tour'));
+    res := res || pg_temp.ln('guard: day tour with no slot is refused', v_txt = 'slots_required', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-13', 0, 11, 0, 'day_tour'));
+    res := res || pg_temp.ln('guard: day tour of 11 on one slot is refused (capacity 10)', v_txt = 'slot_capacity', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1, t2], '2099-02-14', 0, 15, 0, 'day_tour'));
+    res := res || pg_temp.ln('guard: day tour of 15 on two slots succeeds', v_txt = 'ok', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-10', 0, 2, 0, 'day_tour'));
+    res := res || pg_temp.ln('guard: a second day tour on a taken slot and date is refused', v_txt = 'slot_taken', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-10', 1));
+    res := res || pg_temp.ln('guard: an overnight stay on a slot held by a day tour that date is refused', v_txt = 'slot_taken', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-09', 1));
+    res := res || pg_temp.ln('guard: a stay checking out on the day-tour date does not clash', v_txt = 'ok', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-11', 1));
+    res := res || pg_temp.ln('guard: the night after the day-tour date is free', v_txt = 'ok', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t3], '2099-02-11', 1, 2, 0, 'day_tour'));
     res := res || pg_temp.ln('guard: day tour with nights > 0 is refused', v_txt = 'invalid_input', v_txt);
-    v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-02-11', 0, 2, 1, 'day_tour'));
-    res := res || pg_temp.ln('guard: day tour with a tent is refused', v_txt = 'invalid_input', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t3], '2099-02-11', 0, 2, 1, 'day_tour'));
+    res := res || pg_temp.ln('day tour tents: a day tour with 1 tent succeeds', v_txt = 'ok', v_txt);
+    select b.tents into v_n from bookings b where b.kind = 'day_tour' and b.check_in = '2099-02-11' and b.slot_ids = array[t3];
+    res := res || pg_temp.ln('day tour tents: the booking row keeps the tent', v_n = 1, v_n::text);
+    select o.tents into v_n from occupancy_between('2099-02-11', '2099-02-11') o;
+    res := res || pg_temp.ln('day tour tents: occupancy_between counts the day tour tent on its date', v_n = 1, v_n::text);
+    select o.tents into v_n from occupancy_between('2099-02-10', '2099-02-10') o;
+    res := res || pg_temp.ln('day tour tents: the day before is not affected', v_n = 0, v_n::text);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t2], '2099-02-11', 0, 2, 2, 'day_tour'));
+    res := res || pg_temp.ln('day tour tents: 2 more tents would pass the stock of 2, refused with the date', v_txt = 'tents_unavailable:2099-02-11', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t2], '2099-02-11', 0, 2, 3, 'day_tour'));
+    res := res || pg_temp.ln('day tour tents: 3 tents on a stock of 2 is refused', v_txt = 'tents_unavailable:2099-02-11', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t2], '2099-02-11', 0, 2, 1, 'day_tour'));
+    res := res || pg_temp.ln('day tour tents: the last tent in stock succeeds', v_txt = 'ok', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t4], '2099-02-11', 1, 2, 1));
+    res := res || pg_temp.ln('day tour tents: an overnight tent that night is refused once day tours use the stock', v_txt = 'tents_unavailable:2099-02-11', v_txt);
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t4], '2099-02-11', 1, 2, 0));
+    res := res || pg_temp.ln('day tour tents: an overnight stay with no tent that night still succeeds', v_txt = 'ok', v_txt);
     v_txt := pg_temp.try_cb(pg_temp.pl(array[]::smallint[], '2099-02-12', 1));
     res := res || pg_temp.ln('guard: overnight with no slot is refused', v_txt = 'slots_required', v_txt);
     v_txt := pg_temp.try_cb(pg_temp.pl(null, '2099-02-12', 1));
@@ -324,11 +354,11 @@ begin
     res := res || pg_temp.ln('guard: 10 guests on 1 slot succeeds', v_txt = 'ok', v_txt);
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t2, t3], '2099-02-13', 1, 11));
     res := res || pg_temp.ln('guard: 11 guests on 2 slots succeeds', v_txt = 'ok', v_txt);
-    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1, t1], '2099-02-14', 1, 11));
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1, t1], '2099-02-15', 1, 11));
     res := res || pg_temp.ln('guard: a repeated slot id counts once (11 guests on [T1,T1] refused)', v_txt = 'slot_capacity', v_txt);
-    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1, t1], '2099-02-14', 1, 5));
+    v_txt := pg_temp.try_cb(pg_temp.pl(array[t1, t1], '2099-02-15', 1, 5));
     res := res || pg_temp.ln('guard: a repeated slot id does not cause slot_taken', v_txt = 'ok', v_txt);
-    select slot_ids = array[t1] into v_ok from bookings where check_in = '2099-02-14';
+    select slot_ids = array[t1] into v_ok from bookings where check_in = '2099-02-15';
     res := res || pg_temp.ln('guard: the stored slot_ids are de-duplicated', v_ok);
     v_txt := pg_temp.try_cb(pg_temp.pl(array[t1], '2099-02-16', 1, 0));
     res := res || pg_temp.ln('guard: zero guests is refused', v_txt = 'invalid_input', v_txt);
