@@ -74,6 +74,7 @@ export type Booking = {
   gcash_ref: string | null;
   proof_path: string | null;
   proof_submitted_at: string | null;
+  contract_path: string | null;
   decided_at: string | null;
   decided_by: string | null;
   reject_reason: string | null;

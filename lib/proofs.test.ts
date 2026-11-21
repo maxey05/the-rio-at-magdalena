@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isCronAuthorized } from "./cron.ts";
-import { checkProofBytes, holdIsOpen, MAX_PROOF_BYTES, sniffImage } from "./proofs.ts";
+import {
+  checkContractBytes,
+  checkProofBytes,
+  checkUploadTotal,
+  holdIsOpen,
+  MAX_CONTRACT_BYTES,
+  MAX_PROOF_BYTES,
+  MAX_UPLOAD_TOTAL_BYTES,
+  sniffContract,
+  sniffImage,
+} from "./proofs.ts";
 import { normalizeGcashRef } from "./rules.ts";
 
 const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46]);
@@ -40,6 +50,35 @@ test("checkProofBytes refuses empty, oversize, text and pdf", () => {
   assert.equal(checkProofBytes(padded(jpeg, MAX_PROOF_BYTES + 1)).ok, false);
   assert.equal(checkProofBytes(text).ok, false);
   assert.equal(checkProofBytes(pdf).ok, false);
+});
+
+test("sniffContract accepts a pdf and the three image types", () => {
+  assert.deepEqual(sniffContract(pdf), { ext: "pdf", contentType: "application/pdf" });
+  assert.deepEqual(sniffContract(jpeg), { ext: "jpg", contentType: "image/jpeg" });
+  assert.deepEqual(sniffContract(png), { ext: "png", contentType: "image/png" });
+  assert.deepEqual(sniffContract(webp), { ext: "webp", contentType: "image/webp" });
+});
+
+test("sniffContract refuses text and a truncated pdf header", () => {
+  assert.equal(sniffContract(text), null);
+  assert.equal(sniffContract(new TextEncoder().encode("%PDF")), null);
+});
+
+test("checkContractBytes accepts a pdf within 5 MB", () => {
+  assert.equal(checkContractBytes(padded(pdf, 2048)).ok, true);
+  assert.equal(checkContractBytes(padded(pdf, MAX_CONTRACT_BYTES)).ok, true);
+});
+
+test("checkContractBytes refuses empty, oversize and unknown files", () => {
+  assert.equal(checkContractBytes(new Uint8Array()).ok, false);
+  assert.equal(checkContractBytes(padded(pdf, MAX_CONTRACT_BYTES + 1)).ok, false);
+  assert.equal(checkContractBytes(text).ok, false);
+});
+
+test("checkUploadTotal allows up to 5.5 MB together and refuses more", () => {
+  assert.equal(checkUploadTotal(1024, 2048), null);
+  assert.equal(checkUploadTotal(MAX_UPLOAD_TOTAL_BYTES - 10, 10), null);
+  assert.ok(checkUploadTotal(MAX_UPLOAD_TOTAL_BYTES, 1));
 });
 
 test("a 13-digit ref is accepted and a 12-digit ref is refused", () => {
