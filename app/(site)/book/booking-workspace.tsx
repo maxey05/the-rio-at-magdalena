@@ -51,10 +51,6 @@ const EMPTY_DETAILS: DetailsForm = {
 
 const DETAIL_FIELD_ORDER = ["name", "email", "mobile", "notes", "agreeRules", "agreePrivacy"] as const;
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 export function BookingWorkspace({ settings, today, initial }: WorkspaceProps) {
   const bookable = useMemo(() => bookingWindow(today, settings), [today, settings]);
   const [kind, setKind] = useState<StayKind>(initial.kind ?? "overnight");
@@ -182,9 +178,7 @@ export function BookingWorkspace({ settings, today, initial }: WorkspaceProps) {
     if (!stayOk || guestTotal < 1 || capacity.ok) {
       return null;
     }
-    const missing = capacity.neededSlots - slotIds.length;
-    const who = `${plural(guestTotal, "camper needs", "campers need")} at least ${plural(capacity.neededSlots, "slot", "slots")}.`;
-    return slotIds.length === 0 ? `${who} Pick ${missing} on the map.` : `${who} Pick ${missing} more on the map.`;
+    return "Please pick a slot on the map before proceeding.";
   })();
 
   const warning = guestsError ?? slotWarning;
@@ -194,6 +188,7 @@ export function BookingWorkspace({ settings, today, initial }: WorkspaceProps) {
   const slotChips = (slots ?? []).filter((slot) => slotIds.includes(slot.id)).map((slot) => ({ id: slot.id, label: slot.code }));
 
   const mapNote = checkIn === null ? "Choose your dates to see which slots are free." : null;
+  const mapHint = checkIn === null ? "Please pick a tour and date first!" : null;
 
   function chooseKind(next: StayKind) {
     if (next === kind) {
@@ -351,7 +346,7 @@ export function BookingWorkspace({ settings, today, initial }: WorkspaceProps) {
               {messages}
               <div className="flex flex-wrap items-start gap-5">
                 <div className="min-w-0 flex-[999_1_37.5rem]">
-                  <CampMap slots={slots} selected={slotIds} slotCapacity={settings.slotCapacity} note={mapNote} onToggle={toggleSlot} />
+                  <CampMap slots={slots} selected={slotIds} slotCapacity={settings.slotCapacity} note={mapNote} hint={mapHint} onToggle={toggleSlot} />
                 </div>
                 <BookingSummary
                   kind={kind}
@@ -406,7 +401,7 @@ export function BookingWorkspace({ settings, today, initial }: WorkspaceProps) {
                   }
                 >
                   <p className="text-base text-earth-muted">
-                    Your slots are held for {settings.holdMinutes} minutes after you reserve. You pay the downpayment on the next page.
+                    Your slots are held for {settings.holdMinutes} minutes after you reserve.
                   </p>
                 </BookingSummary>
               </div>
