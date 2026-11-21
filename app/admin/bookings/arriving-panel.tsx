@@ -63,7 +63,7 @@ export async function ArrivingPanel({ today }: { today: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 id="arriving-title">Arriving today and tomorrow</h2>
-          <p className="text-ink-muted">Confirmed bookings only. Balance due is collected at check-in.</p>
+          <p className="text-ink-muted">Confirmed bookings only. The balance is due a day before arrival.</p>
         </div>
         <div className="print-hide">
           <PrintButton />

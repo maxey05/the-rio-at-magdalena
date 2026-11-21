@@ -32,7 +32,7 @@ export default function RatesPage() {
       <PageHeader
         overline="Rates"
         title="Simple rates, same every day"
-        intro="No weekend or holiday surcharge. Pay 50% by GCash when you book and the rest at check-in."
+        intro="No weekend or holiday surcharge. Pay 50% by GCash when you book and the rest a day before you arrive."
       />
 
       <Section labelledBy="rates-tables-title">
@@ -90,7 +90,7 @@ export default function RatesPage() {
               <dd className="font-bold tabular-nums">{formatPeso(ratesExample.downpayment)}</dd>
             </div>
             <div className="flex items-baseline justify-between gap-4 border-t border-line py-3">
-              <dt>Balance at check-in</dt>
+              <dt>Balance (due a day before arrival)</dt>
               <dd className="font-bold tabular-nums">{formatPeso(ratesExample.balance)}</dd>
             </div>
           </dl>

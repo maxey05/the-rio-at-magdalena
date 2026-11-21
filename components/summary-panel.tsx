@@ -100,7 +100,7 @@ export function SummaryPanel({ data }: { data: SummaryData }) {
               <dd className="tabular-nums">{formatPeso(quote.downpayment)}</dd>
             </div>
             <div className="flex justify-between gap-4 text-ink-muted">
-              <dt>Balance at check-in</dt>
+              <dt>Balance (due a day before arrival)</dt>
               <dd className="font-bold tabular-nums">{formatPeso(quote.balance)}</dd>
             </div>
           </dl>

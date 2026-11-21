@@ -47,7 +47,7 @@ function stayLine(b: Booking): string {
 
 function detailLines(b: Booking, ctx: EmailContext): string[] {
   const lines = [`Booking: ${b.ref}`, stayLine(b)];
-  if (b.kind === "overnight") {
+  if (b.kind === "overnight" || ctx.slotLabels.length > 0) {
     lines.push(`Slots: ${ctx.slotLabels.join(", ")}`);
   }
   lines.push(`Guests: ${b.guests}`);
@@ -107,7 +107,7 @@ export function composeConfirmed(b: Booking, ctx: EmailContext): Composed {
       ...detailLines(b, ctx),
       "",
       `Downpayment paid: ${formatPeso(b.downpayment)}`,
-      `Balance due at check-in: ${formatPeso(b.balance)}`,
+      `Balance due a day before arrival: ${formatPeso(b.balance)}`,
       `Security deposit: ${ctx.depositNote}`,
       "",
       ...times,

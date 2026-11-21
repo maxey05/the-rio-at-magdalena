@@ -46,6 +46,7 @@ const booking: Booking = {
   gcash_ref: "1234567890123",
   proof_path: "proofs/x.jpg",
   proof_submitted_at: "2026-11-19T01:00:00Z",
+  contract_path: null,
   decided_at: null,
   decided_by: null,
   reject_reason: "Amount did not match",
@@ -100,7 +101,7 @@ describe("confirmed email", () => {
     assert.ok(body.includes("Guests: 4"));
     assert.ok(body.includes("Rented tents: 1"));
     assert.ok(body.includes(`Downpayment paid: ${formatPeso(2200)}`));
-    assert.ok(body.includes(`Balance due at check-in: ${formatPeso(2200)}`));
+    assert.ok(body.includes(`Balance due a day before arrival: ${formatPeso(2200)}`));
   });
 
   it("has check-in and check-out times, deposit note, map and cancel policy", () => {
