@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Figtree, Fraunces } from "next/font/google";
 import localFont from "next/font/local";
+import { GlobalLoadingBar } from "@/components/top-loading-bar";
 import { site } from "@/lib/content";
 import "./globals.css";
 
@@ -64,7 +65,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${fraunces.variable} ${figtree.variable} ${mackinac.variable} ${crimson.variable} ${instrument.variable}`}>
-      <body>{children}</body>
+      <body>
+        <GlobalLoadingBar />
+        {children}
+      </body>
     </html>
   );
 }
