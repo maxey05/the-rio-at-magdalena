@@ -19,7 +19,7 @@ import {
   staySummary,
 } from "@/lib/admin";
 import { bookingSlotLabels } from "@/lib/bookings";
-import { signedProofUrl } from "@/lib/proofs";
+import { signedContractUrl, signedProofUrl } from "@/lib/proofs";
 import { formatPeso, manilaToday } from "@/lib/rules";
 import { requireAdmin } from "@/lib/supabase";
 import { emailErrorText, EmailStatus } from "../../email-log/email-status";
@@ -68,10 +68,11 @@ export default async function BookingDetailPage({ params }: BookingDetailProps) 
   if (!booking) {
     notFound();
   }
-  const [slots, emails, proofUrl] = await Promise.all([
+  const [slots, emails, proofUrl, contractUrl] = await Promise.all([
     bookingSlotLabels(booking),
     bookingEmails(booking.id),
     booking.proof_path ? signedProofUrl(booking.proof_path) : Promise.resolve(null),
+    booking.contract_path ? signedContractUrl(booking.contract_path) : Promise.resolve(null),
   ]);
   const timeline = buildTimeline(booking);
   const lines = priceLines(booking);
@@ -126,11 +127,11 @@ export default async function BookingDetailPage({ params }: BookingDetailProps) 
         <dl className="divide-y divide-line">
           <Row label="Type">{overnight ? "Overnight stay" : "Day tour"}</Row>
           <Row label="Dates">{staySummary(booking)}</Row>
-          {overnight ? <Row label="Slots">{slots.join(", ")}</Row> : null}
+          {slots.length > 0 ? <Row label="Slots">{slots.join(", ")}</Row> : null}
           <Row label="Guests">
             {booking.guests} ({guestBreakdown(booking)})
           </Row>
-          {overnight ? <Row label="Tents">{booking.tents}</Row> : null}
+          {overnight || booking.tents > 0 ? <Row label="Tents">{booking.tents}</Row> : null}
         </dl>
       </Panel>
 
@@ -148,22 +149,36 @@ export default async function BookingDetailPage({ params }: BookingDetailProps) 
         <dl className="flex flex-col gap-1 border-t border-line pt-3">
           <MoneyRow label="Total" amount={booking.total} />
           <MoneyRow label="Downpayment" amount={booking.downpayment} strong />
-          <MoneyRow label="Balance at check-in" amount={booking.balance} />
+          <MoneyRow label="Balance (due a day before arrival)" amount={booking.balance} />
         </dl>
       </Panel>
 
       <Panel id="payment-title" title="Payment">
         <dl className="divide-y divide-line">
-          <Row label="GCash reference">
-            {booking.gcash_ref ? (
+          {booking.gcash_ref ? (
+            <Row label="GCash reference">
               <span className="flex flex-wrap items-center gap-3 sm:justify-end">
                 <span className="font-mono tabular-nums">{booking.gcash_ref}</span>
                 <CopyButton text={booking.gcash_ref} />
               </span>
-            ) : (
-              "None"
-            )}
-          </Row>
+            </Row>
+          ) : null}
+          {booking.contract_path ? (
+            <Row label="Signed contract">
+              {contractUrl ? (
+                <a
+                  href={contractUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-moss-strong underline underline-offset-4"
+                >
+                  Open signed contract<span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              ) : (
+                "The link could not load. Reload this page for a fresh link."
+              )}
+            </Row>
+          ) : null}
           {booking.proof_submitted_at ? <Row label="Proof sent">{formatManilaDateTime(booking.proof_submitted_at)}</Row> : null}
           {booking.reject_reason ? <Row label="Rejection reason">{booking.reject_reason}</Row> : null}
           {booking.balance_collected !== null ? (

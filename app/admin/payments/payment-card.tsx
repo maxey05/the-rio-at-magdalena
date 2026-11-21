@@ -26,6 +26,8 @@ export type PaymentCardData = {
   total: number;
   gcashRef: string | null;
   proofUrl: string | null;
+  contractUrl: string | null;
+  hasContract: boolean;
   submitted: string | null;
 };
 
@@ -84,11 +86,29 @@ function PaymentCard({ data }: { data: PaymentCardData }) {
           <Row label="Downpayment to verify">
             <span className="text-h3 font-bold tabular-nums">{formatPeso(data.downpayment)}</span>
           </Row>
-          <Row label="GCash reference">
-            <span className="flex flex-wrap items-center gap-3 sm:justify-end">
-              <span className="font-mono tabular-nums">{data.gcashRef ?? "None"}</span>
-              {data.gcashRef ? <CopyButton text={data.gcashRef} /> : null}
-            </span>
+          {data.gcashRef ? (
+            <Row label="GCash reference">
+              <span className="flex flex-wrap items-center gap-3 sm:justify-end">
+                <span className="font-mono tabular-nums">{data.gcashRef}</span>
+                <CopyButton text={data.gcashRef} />
+              </span>
+            </Row>
+          ) : null}
+          <Row label="Signed contract">
+            {data.contractUrl ? (
+              <a
+                href={data.contractUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-moss-strong underline underline-offset-4"
+              >
+                Open signed contract<span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : data.hasContract ? (
+              "The link could not load. Reload this page for a fresh link."
+            ) : (
+              "None sent"
+            )}
           </Row>
           <Row label="Guest">
             {data.guestName}
@@ -115,8 +135,8 @@ function PaymentCard({ data }: { data: PaymentCardData }) {
             title="Confirm this payment?"
             description={
               <p>
-                Check that {formatPeso(data.downpayment)} reached your GCash with reference{" "}
-                <span className="font-mono">{data.gcashRef ?? "none"}</span>. The guest gets the confirmed email.
+                Check that {formatPeso(data.downpayment)} reached your GCash and that the signed contract is complete.
+                The guest gets the confirmed email.
               </p>
             }
             confirmLabel="Confirm payment"
