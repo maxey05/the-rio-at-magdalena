@@ -32,13 +32,13 @@ function FieldShell({ id, label, error, hint, children }: FieldShellProps) {
   );
 }
 
-export function FieldError({ id, error }: { id?: string; error?: string }) {
+export function FieldError({ id, error, icon = true }: { id?: string; error?: string; icon?: boolean }) {
   if (!error) {
     return null;
   }
   return (
     <p id={id} role="alert" className="flex items-start gap-2 text-small font-medium text-danger">
-      <InfoIcon width={18} height={18} className="mt-0.5 shrink-0" />
+      {icon ? <InfoIcon width={18} height={18} className="mt-0.5 shrink-0" /> : null}
       <span>{error}</span>
     </p>
   );
