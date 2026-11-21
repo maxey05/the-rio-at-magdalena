@@ -254,3 +254,59 @@ export function ExternalLinkIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function StarIcon(props: IconProps) {
+  return (
+    <IconBase fill="currentColor" strokeWidth={1} {...props}>
+      <path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4-5.7-3.1-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8Z" />
+    </IconBase>
+  );
+}
+
+export function MailIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect width="18" height="14" x="3" y="5" rx="1" />
+      <path d="m3 7 9 6 9-6" />
+    </IconBase>
+  );
+}
+
+export function PhoneIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" />
+    </IconBase>
+  );
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect width="18" height="16" x="3" y="5" rx="1" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+    </IconBase>
+  );
+}
+
+export function DownloadIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 4v12" />
+      <path d="m7 11 5 5 5-5" />
+      <path d="M4 20h16" />
+    </IconBase>
+  );
+}
+
+export function UploadIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 16V4" />
+      <path d="m7 9 5-5 5 5" />
+      <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+    </IconBase>
+  );
+}
