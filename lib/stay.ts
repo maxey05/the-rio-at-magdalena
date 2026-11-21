@@ -66,7 +66,7 @@ export const FEW_SLOTS_LEFT = 1;
 const MAX_URL_SLOTS = 20;
 
 const OVERNIGHT_STEPS: readonly StepId[] = ["type", "dates", "slots", "guests", "details", "review"];
-const DAY_TOUR_STEPS: readonly StepId[] = ["type", "dates", "guests", "details", "review"];
+const DAY_TOUR_STEPS: readonly StepId[] = ["type", "dates", "slots", "guests", "details", "review"];
 
 const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 const dayWithYearFormatter = new Intl.DateTimeFormat("en-US", {
@@ -147,15 +147,10 @@ export function dateState(input: { closed: boolean; guestsLeft: number; freeSlot
   return "available";
 }
 
-export function buildDates(
-  rows: readonly OccupancyRow[],
-  kind: StayKind,
-  totalSlots: number,
-  s: Settings,
-): DateAvailability[] {
+export function buildDates(rows: readonly OccupancyRow[], totalSlots: number, s: Settings): DateAvailability[] {
   return rows.map((row) => {
     const guestsLeft = Math.max(0, s.siteCap - row.guests);
-    const freeSlots = kind === "overnight" ? Math.max(0, totalSlots - row.slots_taken) : null;
+    const freeSlots = Math.max(0, totalSlots - row.slots_taken);
     return {
       d: row.d,
       state: dateState({ closed: row.closed, guestsLeft, freeSlots }),
@@ -197,7 +192,11 @@ export function stayLimits(
   const byDate = new Map(dates.map((day) => [day.d, day]));
   if (kind === "day_tour") {
     const day = byDate.get(checkIn);
-    return { maxNights: 0, maxGuests: isOpen(day) ? day.guestsLeft : 0, maxTents: 0 };
+    return {
+      maxNights: 0,
+      maxGuests: isOpen(day) ? day.guestsLeft : 0,
+      maxTents: isOpen(day) ? Math.min(s.tentStock, day.tentsLeft) : 0,
+    };
   }
   let maxNights = 0;
   while (maxNights < s.maxNights && isOpen(byDate.get(addDays(checkIn, maxNights)))) {
@@ -251,7 +250,7 @@ export function parseSelection(
   }
   const requested = parseInteger(firstParam(params.n)) ?? 1;
   const nights = validateStay({ kind, checkIn: rawCheckIn, nights: requested }, today, s).ok ? requested : 1;
-  const slotIds = kind === "overnight" ? parseSlotIds(firstParam(params.slots)) : [];
+  const slotIds = parseSlotIds(firstParam(params.slots));
   return { kind, checkIn: rawCheckIn, nights, slotIds };
 }
 
@@ -264,9 +263,9 @@ export function selectionQuery(selection: Selection): string {
     query.set("in", selection.checkIn);
     if (selection.kind === "overnight") {
       query.set("n", String(selection.nights));
-      if (selection.slotIds.length > 0) {
-        query.set("slots", selection.slotIds.join(","));
-      }
+    }
+    if (selection.slotIds.length > 0) {
+      query.set("slots", selection.slotIds.join(","));
     }
   }
   return query.toString().replaceAll("%2C", ",");

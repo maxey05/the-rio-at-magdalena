@@ -27,7 +27,7 @@ describe("parseCreateError", () => {
 
   it("maps closed, input problems and anything unknown", () => {
     assert.deepEqual(parseCreateError("closed", null), { ok: false, code: "closed" });
-    for (const code of ["invalid_input", "day_tour_slots", "slots_required", "slot_invalid", "slot_capacity"]) {
+    for (const code of ["invalid_input", "slots_required", "slot_invalid", "slot_capacity"]) {
       assert.deepEqual(parseCreateError(code, null), { ok: false, code: "invalid" });
     }
     assert.deepEqual(parseCreateError("settings_missing", null), { ok: false, code: "error" });

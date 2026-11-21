@@ -31,7 +31,6 @@ const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,64}$/;
 const UNIQUE_VIOLATION = "23505";
 const INVALID_CODES = new Set([
   "invalid_input",
-  "day_tour_slots",
   "slots_required",
   "slot_invalid",
   "slot_capacity",

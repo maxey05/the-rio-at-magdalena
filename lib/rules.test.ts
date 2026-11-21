@@ -10,6 +10,7 @@ import {
   checkSlotCapacity,
   formatPeso,
   guestCount,
+  heldNights,
   isBookableDate,
   isGuestCancellable,
   manilaNow,
@@ -85,20 +86,30 @@ describe("stayNights", () => {
   });
 });
 
+describe("heldNights", () => {
+  it("holds each night of an overnight stay", () => {
+    assert.deepEqual(heldNights("overnight", "2026-11-20", 2), ["2026-11-20", "2026-11-21"]);
+  });
+
+  it("holds only the tour date for a day tour", () => {
+    assert.deepEqual(heldNights("day_tour", "2026-11-20", 0), ["2026-11-20"]);
+  });
+});
+
 describe("validateStay", () => {
   const overnight = (checkIn: string, nights: number) => ({ kind: "overnight" as const, checkIn, nights });
 
-  it("accepts 1 and 7 nights", () => {
+  it("accepts 1 and 30 nights", () => {
     assert.equal(validateStay(overnight("2026-11-20", 1), TODAY, DEFAULT_SETTINGS).ok, true);
-    assert.equal(validateStay(overnight("2026-11-20", 7), TODAY, DEFAULT_SETTINGS).ok, true);
+    assert.equal(validateStay(overnight("2026-11-20", 30), TODAY, DEFAULT_SETTINGS).ok, true);
   });
 
-  it("rejects 0 and 8 nights", () => {
+  it("rejects 0 and 31 nights", () => {
     const zero = validateStay(overnight("2026-11-20", 0), TODAY, DEFAULT_SETTINGS);
-    const eight = validateStay(overnight("2026-11-20", 8), TODAY, DEFAULT_SETTINGS);
+    const tooLong = validateStay(overnight("2026-11-20", 31), TODAY, DEFAULT_SETTINGS);
     assert.equal(zero.ok, false);
-    assert.equal(eight.ok, false);
-    assert.ok(eight.errors.nights);
+    assert.equal(tooLong.ok, false);
+    assert.ok(tooLong.errors.nights);
   });
 
   it("rejects fractional nights", () => {
@@ -159,17 +170,28 @@ describe("priceBooking", () => {
     assert.equal(quote.downpayment, 4000);
   });
 
-  it("prices a day tour and ignores tents and nights", () => {
+  it("prices a day tour once and ignores nights", () => {
     const quote = priceBooking(
-      { kind: "day_tour", adults: 4, seniors: 0, kids: 2, infants: 0, nights: 3, tents: 2 },
+      { kind: "day_tour", adults: 4, seniors: 0, kids: 2, infants: 0, nights: 3, tents: 0 },
       DEFAULT_SETTINGS,
     );
     assert.equal(quote.total, 1600);
     assert.equal(quote.downpayment, 800);
-    assert.equal(quote.tentRate, 0);
     assert.equal(quote.adultRate, 300);
     assert.equal(quote.reducedRate, 200);
     assert.ok(quote.lines.every((line) => !line.label.startsWith("Tents")));
+  });
+
+  it("charges a day tour tent once at the tent price", () => {
+    const quote = priceBooking(
+      { kind: "day_tour", adults: 4, seniors: 0, kids: 2, infants: 0, nights: 3, tents: 2 },
+      DEFAULT_SETTINGS,
+    );
+    assert.equal(quote.tentRate, 500);
+    assert.equal(quote.total, 2600);
+    assert.equal(quote.downpayment, 1300);
+    const tents = quote.lines.find((line) => line.label.startsWith("Tents"));
+    assert.deepEqual(tents && [tents.label, tents.quantity, tents.unitPrice, tents.amount], ["Tents", 2, 500, 1000]);
   });
 
   it("charges infants nothing", () => {
@@ -563,7 +585,7 @@ describe("DEFAULT_SETTINGS", () => {
 
   it("holds the booking window rules", () => {
     assert.equal(DEFAULT_SETTINGS.windowDays, 90);
-    assert.equal(DEFAULT_SETTINGS.maxNights, 7);
+    assert.equal(DEFAULT_SETTINGS.maxNights, 30);
     assert.equal(DEFAULT_SETTINGS.holdMinutes, 30);
   });
 

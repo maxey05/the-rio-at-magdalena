@@ -104,7 +104,7 @@ export const DEFAULT_SETTINGS: Settings = {
   slotCapacity: 10,
   siteCap: 100,
   windowDays: 90,
-  maxNights: 7,
+  maxNights: 30,
   holdMinutes: 30,
   downpaymentPct: 50,
 };
@@ -249,6 +249,12 @@ export function stayNights(checkIn: string, nights: number): string[] {
   return Array.from({ length: nights }, (_, index) => addDays(checkIn, index));
 }
 
+// The nights a booking holds its slots. A stay holds each night from check-in;
+// a day tour holds only its own date.
+export function heldNights(kind: StayKind, checkIn: string, nights: number): string[] {
+  return kind === "day_tour" ? [checkIn] : stayNights(checkIn, nights);
+}
+
 export function validateStay(input: StayInput, today: string, s: Settings): StayResult {
   if (!isBookableDate(input.checkIn, today, s)) {
     return { ok: false, errors: { checkIn: "Choose a date inside the booking window." } };
@@ -278,8 +284,8 @@ export function priceBooking(input: PriceInput, s: Settings): PriceQuote {
   const nights = overnight ? input.nights : 1;
   const adultRate = overnight ? s.overnightAdult : s.dayAdult;
   const reducedRate = overnight ? s.overnightReduced : s.dayReduced;
-  const tentRate = overnight ? s.tentPrice : 0;
-  const tents = overnight ? input.tents : 0;
+  const tentRate = s.tentPrice;
+  const tents = input.tents;
   const suffix = overnight ? ` (${nights} ${nights === 1 ? "night" : "nights"})` : "";
   const lines = [
     priceLine(`Adults${suffix}`, input.adults, adultRate * nights),
@@ -348,7 +354,7 @@ export function validateDetails(form: DetailsForm): DetailsResult {
     errors.notes = `Keep notes to ${NOTES_MAX} characters or fewer.`;
   }
   if (!form.agreeRules) {
-    errors.agreeRules = "Please agree to the house rules.";
+    errors.agreeRules = "Please agree to the camping agreement.";
   }
   if (!form.agreePrivacy) {
     errors.agreePrivacy = "Please agree to the privacy notice.";

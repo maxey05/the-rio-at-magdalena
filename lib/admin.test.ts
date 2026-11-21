@@ -202,7 +202,29 @@ describe("priceLines", () => {
     );
   });
 
-  it("charges a day tour once and no tents", () => {
+  it("charges a day tour once and its tents once", () => {
+    const lines = priceLines({
+      kind: "day_tour",
+      nights: 0,
+      adults: 2,
+      seniors: 0,
+      kids: 0,
+      infants: 0,
+      tents: 2,
+      adult_rate: 300,
+      reduced_rate: 200,
+      tent_rate: 500,
+    });
+    assert.deepEqual(
+      lines.map((line) => [line.label, line.quantity, line.unitPrice, line.amount]),
+      [
+        ["Adults", 2, 300, 600],
+        ["Tents", 2, 500, 1000],
+      ],
+    );
+  });
+
+  it("charges a day tour once and no tents when none are rented", () => {
     const lines = priceLines({
       kind: "day_tour",
       nights: 0,
@@ -228,6 +250,7 @@ describe("buildTimeline", () => {
     created_at: "2026-11-19T01:00:00Z",
     hold_expires_at: null,
     proof_submitted_at: null,
+    contract_path: null,
     decided_at: null,
     decided_by: null,
     reject_reason: null,

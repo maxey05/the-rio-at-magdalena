@@ -1,4 +1,4 @@
-import { bookingWindow, manilaToday, stayNights, validateStay, type Settings, type StayKind } from "./rules.ts";
+import { bookingWindow, heldNights, manilaToday, validateStay, type Settings, type StayKind } from "./rules.ts";
 import { getSettings } from "./settings.ts";
 import { buildDates, takenSlotIds, type AvailabilityResponse, type NightRow, type OccupancyRow, type SlotAvailability } from "./stay.ts";
 import { db } from "./supabase.ts";
@@ -65,11 +65,7 @@ function toSlotAvailability(rows: readonly SlotRow[], taken: ReadonlySet<number>
 }
 
 export function validStay(stay: StayQuery | null, kind: StayKind, today: string, s: Settings): stay is StayQuery {
-  return (
-    kind === "overnight" &&
-    stay !== null &&
-    validateStay({ kind, checkIn: stay.checkIn, nights: stay.nights }, today, s).ok
-  );
+  return stay !== null && validateStay({ kind, checkIn: stay.checkIn, nights: stay.nights }, today, s).ok;
 }
 
 export async function getAvailability(
@@ -83,11 +79,11 @@ export async function getAvailability(
   const slotRows = loadSlots();
   const occupancy = loadOccupancy(window.first, window.last);
   const [slots, rows] = await Promise.all([slotRows, occupancy]);
-  const dates = buildDates(rows, kind, slots.length, settings);
+  const dates = buildDates(rows, slots.length, settings);
   if (!validStay(stay, kind, today, settings)) {
     return { dates };
   }
-  const nights = stayNights(stay.checkIn, stay.nights);
+  const nights = heldNights(kind, stay.checkIn, stay.nights);
   const taken = takenSlotIds(await loadNights(nights[0], nights[nights.length - 1]), now);
   return { dates, slots: toSlotAvailability(slots, taken) };
 }

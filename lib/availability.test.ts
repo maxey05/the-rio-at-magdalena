@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { DEFAULT_SETTINGS } from "./rules.ts";
+import { DEFAULT_SETTINGS, addDays } from "./rules.ts";
 import {
   buildDates,
   dateState,
@@ -62,25 +62,29 @@ describe("dateState", () => {
 
 describe("buildDates", () => {
   it("turns occupancy into guests and tents left", () => {
-    const [result] = buildDates([row("2026-12-12", { guests: 85, tents: 3 })], "overnight", 16, DEFAULT_SETTINGS);
+    const [result] = buildDates([row("2026-12-12", { guests: 85, tents: 3 })], 16, DEFAULT_SETTINGS);
     assert.deepEqual(result, { d: "2026-12-12", state: "few", guestsLeft: 15, tentsLeft: 2 });
   });
 
   it("never reports negative room", () => {
-    const [result] = buildDates([row("2026-12-12", { guests: 130, tents: 9 })], "overnight", 16, DEFAULT_SETTINGS);
+    const [result] = buildDates([row("2026-12-12", { guests: 130, tents: 9 })], 16, DEFAULT_SETTINGS);
     assert.equal(result.guestsLeft, 0);
     assert.equal(result.tentsLeft, 0);
     assert.equal(result.state, "full");
   });
 
-  it("marks an overnight date full when every slot is taken but keeps it open for day tours", () => {
+  it("marks a date full when every slot is taken, for overnight stays and day tours alike", () => {
     const rows = [row("2026-12-12", { slots_taken: 16, guests: 40 })];
-    assert.equal(buildDates(rows, "overnight", 16, DEFAULT_SETTINGS)[0].state, "full");
-    assert.equal(buildDates(rows, "day_tour", 16, DEFAULT_SETTINGS)[0].state, "available");
+    assert.equal(buildDates(rows, 16, DEFAULT_SETTINGS)[0].state, "full");
+  });
+
+  it("keeps a date open while a slot is free, even with few left", () => {
+    const rows = [row("2026-12-12", { slots_taken: 14, guests: 40 })];
+    assert.equal(buildDates(rows, 16, DEFAULT_SETTINGS)[0].state, "available");
   });
 
   it("flags closed dates", () => {
-    assert.equal(buildDates([row("2026-12-12", { closed: true })], "day_tour", 16, DEFAULT_SETTINGS)[0].state, "closed");
+    assert.equal(buildDates([row("2026-12-12", { closed: true })], 16, DEFAULT_SETTINGS)[0].state, "closed");
   });
 });
 
@@ -120,8 +124,8 @@ describe("stayLimits", () => {
   const settings = DEFAULT_SETTINGS;
 
   it("allows the full max nights when every night is open", () => {
-    const dates = Array.from({ length: 10 }, (_, index) => day(`2026-12-${String(10 + index).padStart(2, "0")}`));
-    assert.equal(stayLimits(dates, "2026-12-10", 2, "overnight", settings).maxNights, 7);
+    const dates = Array.from({ length: 40 }, (_, index) => day(addDays("2026-12-01", index)));
+    assert.equal(stayLimits(dates, "2026-12-01", 2, "overnight", settings).maxNights, 30);
   });
 
   it("stops before a full or closed night", () => {
@@ -161,14 +165,24 @@ describe("stayLimits", () => {
     assert.equal(limits.maxGuests, 0);
   });
 
-  it("handles a day tour: one date, no tents, no nights", () => {
-    const dates = [day("2026-12-10", { guestsLeft: 42 }), day("2026-12-11", { state: "full", guestsLeft: 0 })];
+  it("handles a day tour: one date, tents from that date, no nights", () => {
+    const dates = [
+      day("2026-12-10", { guestsLeft: 42, tentsLeft: 3 }),
+      day("2026-12-11", { state: "full", guestsLeft: 0, tentsLeft: 5 }),
+    ];
     assert.deepEqual(stayLimits(dates, "2026-12-10", 0, "day_tour", settings), {
       maxNights: 0,
       maxGuests: 42,
-      maxTents: 0,
+      maxTents: 3,
     });
-    assert.equal(stayLimits(dates, "2026-12-11", 0, "day_tour", settings).maxGuests, 0);
+    const closedDay = stayLimits(dates, "2026-12-11", 0, "day_tour", settings);
+    assert.equal(closedDay.maxGuests, 0);
+    assert.equal(closedDay.maxTents, 0);
+  });
+
+  it("caps day tour tents at the stock", () => {
+    const dates = [day("2026-12-10", { tentsLeft: 50 })];
+    assert.equal(stayLimits(dates, "2026-12-10", 0, "day_tour", settings).maxTents, settings.tentStock);
   });
 });
 
@@ -223,13 +237,13 @@ describe("parseSelection", () => {
   });
 
   it("falls back to one night when the stay is invalid", () => {
-    assert.equal(parseSelection({ type: "overnight", in: "2026-12-12", n: "9" }, TODAY, settings).nights, 1);
+    assert.equal(parseSelection({ type: "overnight", in: "2026-12-12", n: "31" }, TODAY, settings).nights, 1);
     assert.equal(parseSelection({ type: "overnight", in: "2026-12-12", n: "abc" }, TODAY, settings).nights, 1);
     assert.equal(parseSelection({ type: "overnight", in: "2027-02-17", n: "2" }, TODAY, settings).nights, 1);
   });
 
-  it("ignores slots for a day tour and bad slot lists", () => {
-    assert.deepEqual(parseSelection({ type: "day_tour", in: "2026-12-12", slots: "4" }, TODAY, settings).slotIds, []);
+  it("keeps slots for a day tour and ignores bad slot lists", () => {
+    assert.deepEqual(parseSelection({ type: "day_tour", in: "2026-12-12", slots: "4" }, TODAY, settings).slotIds, [4]);
     assert.deepEqual(
       parseSelection({ type: "overnight", in: "2026-12-12", slots: "4,x,4,-2,0,7" }, TODAY, settings).slotIds,
       [4, 7],
@@ -251,16 +265,23 @@ describe("selectionQuery and visibleSteps", () => {
     assert.deepEqual(parseSelection(params, TODAY, DEFAULT_SETTINGS), selection);
   });
 
-  it("leaves nights and slots out of a day tour", () => {
+  it("leaves nights out of a day tour but keeps its slots", () => {
     assert.equal(
       selectionQuery({ kind: "day_tour", checkIn: "2026-12-12", nights: 3, slotIds: [1] }),
-      "type=day_tour&in=2026-12-12",
+      "type=day_tour&in=2026-12-12&slots=1",
     );
+    const params = Object.fromEntries(new URLSearchParams("type=day_tour&in=2026-12-12&slots=1"));
+    assert.deepEqual(parseSelection(params, TODAY, DEFAULT_SETTINGS), {
+      kind: "day_tour",
+      checkIn: "2026-12-12",
+      nights: 1,
+      slotIds: [1],
+    });
     assert.equal(selectionQuery({ kind: null, checkIn: null, nights: 1, slotIds: [] }), "");
   });
 
-  it("hides the slots step for a day tour", () => {
+  it("shows the slots step for overnight stays and day tours", () => {
     assert.ok(visibleSteps("overnight").includes("slots"));
-    assert.ok(!visibleSteps("day_tour").includes("slots"));
+    assert.ok(visibleSteps("day_tour").includes("slots"));
   });
 });
