@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { ArrowRightIcon } from "@/components/icons";
 
-export type ButtonVariant = "primary" | "secondary" | "danger" | "cream" | "ghost-light" | "olive" | "ghost-olive" | "earth" | "ghost-earth";
+export type ButtonVariant = "primary" | "secondary" | "danger" | "cream" | "ghost-light" | "olive" | "ghost-olive" | "earth" | "ghost-earth" | "ghost-danger";
 type ButtonSize = "default" | "small";
 
 type ButtonOwnProps = {
@@ -40,9 +40,10 @@ const variantStyles: Record<ButtonVariant, string> = {
   "ghost-olive": "border border-olive-strong text-olive-strong hover:bg-olive-strong hover:text-cream",
   earth: "border border-cream/55 bg-earth text-cream hover:bg-earth-deep focus-visible:outline-cream",
   "ghost-earth": "border border-earth text-earth hover:bg-earth hover:text-cream",
+  "ghost-danger": "border border-danger text-danger hover:bg-danger hover:text-cream focus-visible:outline-danger",
 };
 
-const brandVariants: readonly ButtonVariant[] = ["cream", "ghost-light", "olive", "ghost-olive", "earth", "ghost-earth"];
+const brandVariants: readonly ButtonVariant[] = ["cream", "ghost-light", "olive", "ghost-olive", "earth", "ghost-earth", "ghost-danger"];
 
 const sizeStyles: Record<ButtonSize, string> = {
   default: "min-h-12 px-6 text-body",
