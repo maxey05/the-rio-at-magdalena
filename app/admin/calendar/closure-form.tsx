@@ -7,6 +7,7 @@ import { Field } from "@/components/field";
 import { CheckIcon, ExternalLinkIcon, InfoIcon } from "@/components/icons";
 import { InfoCallout } from "@/components/info-callout";
 import { StatusBadge } from "@/components/status-badge";
+import { TopLoadingBar } from "@/components/top-loading-bar";
 import type { AffectedBooking, ClosureState } from "@/lib/calendar";
 import { formatDay } from "@/lib/stay";
 import { addClosure } from "./actions";
@@ -38,6 +39,7 @@ export function ClosureForm() {
 
   return (
     <form ref={formRef} action={formAction} noValidate className="flex flex-col gap-4">
+      <TopLoadingBar active={pending} />
       {state.ok && state.message ? (
         <p role="status" className="flex items-start gap-3 rounded-input border border-moss bg-moss-soft p-4 text-moss-strong">
           <CheckIcon className="mt-0.5 shrink-0" />
