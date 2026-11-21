@@ -133,7 +133,10 @@ export function BookingSummary({
                 ) : null}
               </span>
             ))}
-            {slotChips.length === 0 ? <span className="text-earth-muted">None yet. Pick on the map.</span> : null}
+            {slotChips.length === 0 ? <span className="text-earth-muted">
+                <span aria-hidden="true">—</span>
+                <span className="sr-only">None selected</span>
+              </span> : null}
           </dd>
         </div>
       </dl>
