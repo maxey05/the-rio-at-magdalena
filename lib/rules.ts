@@ -320,6 +320,9 @@ export function normalizeGcashRef(raw: string): string | null {
 }
 
 function validateName(name: string): string | null {
+  if (name.length === 0) {
+    return "Please enter your name";
+  }
   if (name.length < NAME_MIN || name.length > NAME_MAX) {
     return `Enter your full name (${NAME_MIN} to ${NAME_MAX} characters).`;
   }
@@ -327,6 +330,9 @@ function validateName(name: string): string | null {
 }
 
 function validateEmail(email: string): string | null {
+  if (email.length === 0) {
+    return "Please enter your email";
+  }
   if (email.length > EMAIL_MAX || !EMAIL_PATTERN.test(email)) {
     return "Enter a valid email address.";
   }
@@ -348,7 +354,7 @@ export function validateDetails(form: DetailsForm): DetailsResult {
     errors.email = emailError;
   }
   if (mobile === null) {
-    errors.mobile = "Enter a Philippine mobile number like 0917 123 4567.";
+    errors.mobile = form.mobile.trim() === "" ? "Please enter your number" : "Enter a Philippine mobile number like 0917 123 4567.";
   }
   if (notes.length > NOTES_MAX) {
     errors.notes = `Keep notes to ${NOTES_MAX} characters or fewer.`;
@@ -441,7 +447,7 @@ export function validateInquiry(form: InquiryForm, today: string): InquiryResult
     errors.name = nameError;
   }
   if (mobile === null) {
-    errors.mobile = "Enter a Philippine mobile number like 0917 123 4567.";
+    errors.mobile = form.mobile.trim() === "" ? "Please enter your number" : "Enter a Philippine mobile number like 0917 123 4567.";
   }
   if (emailError) {
     errors.email = emailError;
