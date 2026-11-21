@@ -1,11 +1,11 @@
-"use client";
+ com"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/button";
 import { CloseIcon, MenuIcon } from "@/components/icons";
-import { Wordmark } from "@/components/wordmark";
-import { bookLink, navLinks } from "@/lib/content";
+import { bookLink, navLinks, site } from "@/lib/content";
 
 export function MobileMenu() {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -39,23 +39,23 @@ export function MobileMenu() {
         onClick={openMenu}
         aria-label="Open menu"
         aria-haspopup="dialog"
-        className="inline-flex size-11 items-center justify-center rounded-full lg:hidden"
+        className="inline-flex size-11 items-center justify-center rounded-xs border border-cream/60 text-cream focus-visible:outline-cream lg:hidden"
       >
         <MenuIcon />
       </button>
       <dialog
         ref={dialogRef}
         aria-label="Site menu"
-        className="m-0 ml-auto h-dvh max-h-none w-80 max-w-[85vw] bg-bg p-0 text-ink backdrop:bg-forest/60"
+        className="m-0 ml-auto h-dvh max-h-none w-80 max-w-[85vw] bg-cream p-0 text-earth backdrop:bg-earth/60"
       >
         <div className="flex h-full flex-col gap-8 overflow-y-auto p-4">
           <div className="flex items-center justify-between">
-            <Wordmark />
+            <Image src="/brand/logo-olive-strong.svg" alt={site.name} width={56} height={56} unoptimized className="size-14" />
             <button
               type="button"
               onClick={closeMenu}
               aria-label="Close menu"
-              className="inline-flex size-11 items-center justify-center rounded-full"
+              className="inline-flex size-11 items-center justify-center rounded-xs"
             >
               <CloseIcon />
             </button>
@@ -63,15 +63,15 @@ export function MobileMenu() {
           <nav aria-label="Mobile">
             <ul className="flex flex-col">
               {navLinks.map((link) => (
-                <li key={link.href} className="border-b border-line">
-                  <Link href={link.href} onClick={closeMenu} className="flex min-h-14 items-center text-h3">
+                <li key={link.href} className="border-b border-oatmeal">
+                  <Link href={link.href} onClick={closeMenu} className="flex min-h-14 items-center font-brand-label text-small font-semibold uppercase tracking-nav">
                     {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </nav>
-          <Button href={bookLink.href} onClick={closeMenu} className="mt-auto w-full">
+          <Button href={bookLink.href} variant="olive" arrow onClick={closeMenu} className="mt-auto w-full">
             {bookLink.label}
           </Button>
         </div>
