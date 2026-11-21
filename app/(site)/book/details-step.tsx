@@ -31,7 +31,7 @@ function FieldShell({ id, label, error, className = "", children }: FieldProps) 
         {label}
       </label>
       {children(errorId, Boolean(error))}
-      <FieldError id={errorId} error={error} />
+      <FieldError id={errorId} error={error} icon={false} />
     </div>
   );
 }
