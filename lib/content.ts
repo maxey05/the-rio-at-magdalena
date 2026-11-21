@@ -449,6 +449,54 @@ export const faq: readonly FaqItem[] = [
   },
 ];
 
+function faqAnswer(question: string): string {
+  const item = faq.find((entry) => entry.question === question);
+  if (!item) {
+    throw new Error(`Missing FAQ entry: ${question}`);
+  }
+  return item.answer;
+}
+
+const noWalkInsRule = houseRules.find((rule) => rule.title === "No walk-ins");
+
+export type HomeFaqIcon = "calendar-check" | "clock" | "paw" | "tent";
+
+export type HomeFaqItem = {
+  icon: HomeFaqIcon;
+  question: string;
+  answer: string;
+};
+
+export const homeFaq: {
+  overline: string;
+  title: string;
+  items: readonly HomeFaqItem[];
+  ask: { title: string; body: string; action: string; allLink: NavLink };
+} = {
+  overline: "FAQ",
+  title: "Before you pack",
+  items: [
+    {
+      icon: "calendar-check",
+      question: "Are walk-ins allowed?",
+      answer: `No. ${noWalkInsRule?.detail ?? noWalkInsNotice.body} Bookings open up to ${Math.round(DEFAULT_SETTINGS.windowDays / 30)} months ahead.`,
+    },
+    {
+      icon: "clock",
+      question: "What time are check-in and check-out?",
+      answer: faqAnswer("What time is check-in and check-out?"),
+    },
+    { icon: "paw", question: "Are pets allowed?", answer: faqAnswer("Can I bring my dog?") },
+    { icon: "tent", question: "Can tents be rented?", answer: faqAnswer("Can I rent a tent?") },
+  ],
+  ask: {
+    title: "Still have a question?",
+    body: "Message us on Facebook and we'll help you plan your trip.",
+    action: "Message us",
+    allLink: { href: "/rules", label: "All rules & FAQ" },
+  },
+};
+
 export const gettingThere = {
   intro: "The Rio is best reached by car.",
   helpLine: "Need help finding us? Message us on Facebook and we will point you the right way.",
@@ -709,6 +757,7 @@ export type HomeGalleryTile = {
   photo: Photo;
   position?: string;
   layout: string;
+  tilt: string;
 };
 
 export const homeGallery: {
@@ -724,13 +773,19 @@ export const homeGallery: {
     {
       photo: homePhotos.aerial,
       layout: "col-span-2 row-span-2 md:col-[1/3] md:row-[1/3]",
+      tilt: "-0.6deg",
     },
-    { photo: homePhotos.tentsTree, layout: "md:col-[3/4] md:row-[1/2]" },
-    { photo: homePhotos.riverRocks, layout: "row-span-2 md:col-[4/5] md:row-[1/3]" },
-    { photo: homePhotos.horse, position: "center 70%", layout: "md:col-[3/4] md:row-[2/3]" },
-    { photo: homePhotos.dog, position: "center 45%", layout: "md:col-[1/2] md:row-[3/4]" },
-    { photo: homePhotos.campsiteSunset, position: "center 45%", layout: "col-span-2 md:col-[2/4] md:row-[3/4]" },
-    { photo: homePhotos.fruitTree, position: "center 42%", layout: "md:col-[4/5] md:row-[3/4]" },
+    { photo: homePhotos.tentsTree, layout: "md:col-[3/4] md:row-[1/2]", tilt: "1.2deg" },
+    { photo: homePhotos.riverRocks, layout: "row-span-2 md:col-[4/5] md:row-[1/3]", tilt: "-1deg" },
+    { photo: homePhotos.horse, position: "center 70%", layout: "md:col-[3/4] md:row-[2/3]", tilt: "0.8deg" },
+    { photo: homePhotos.dog, position: "center 45%", layout: "md:col-[1/2] md:row-[3/4]", tilt: "-1.3deg" },
+    {
+      photo: homePhotos.campsiteSunset,
+      position: "center 45%",
+      layout: "col-span-2 md:col-[2/4] md:row-[3/4]",
+      tilt: "0.5deg",
+    },
+    { photo: homePhotos.fruitTree, position: "center 42%", layout: "md:col-[4/5] md:row-[3/4]", tilt: "1.1deg" },
   ],
 };
 
@@ -780,6 +835,53 @@ export const googleReviews: {
 export const homeLocation = {
   overline: "Location",
   title: "Find us in Magdalena, Laguna",
+};
+
+export type SocialTile = {
+  id: string;
+  src: string;
+  position: string;
+  tilt: string;
+  label: string;
+};
+
+export const homeSocial: {
+  overline: string;
+  title: string;
+  tiles: readonly SocialTile[];
+} = {
+  overline: "Follow along",
+  title: "Stay close to the river",
+  tiles: [
+    {
+      id: "social-canopy",
+      src: "/social/social-canopy.webp",
+      position: "center 55%",
+      tilt: "-1.2deg",
+      label: "Sunset under the canopy, on Instagram",
+    },
+    {
+      id: "social-tents",
+      src: "/social/social-tents.webp",
+      position: "center 60%",
+      tilt: "0.9deg",
+      label: "Morning tents under the big tree, on Instagram",
+    },
+    {
+      id: "social-river",
+      src: "/social/social-river.webp",
+      position: "center 70%",
+      tilt: "-0.7deg",
+      label: "The rocky river, on Instagram",
+    },
+    {
+      id: "social-aerial",
+      src: "/social/social-aerial.webp",
+      position: "center 50%",
+      tilt: "1.3deg",
+      label: "Aerial view of the two rivers, on Instagram",
+    },
+  ],
 };
 
 export type FooterContact = {
