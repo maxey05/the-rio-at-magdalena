@@ -90,7 +90,7 @@ export function CancelSection({ booking }: StatusSectionProps) {
   );
 }
 
-function RefundNote({ booking }: StatusSectionProps) {
+export function RefundNote({ booking }: StatusSectionProps) {
   if (booking.refund_status === "due") {
     return (
       <p>
@@ -106,20 +106,6 @@ function RefundNote({ booking }: StatusSectionProps) {
     return <p>{`Refund of ${formatPeso(booking.downpayment)} sent by GCash${reference}${sentAt}.`}</p>;
   }
   return null;
-}
-
-function Cancelled({ booking }: StatusSectionProps) {
-  return (
-    <Panel id="cancelled-title" title="This booking was cancelled">
-      <p>{booking.cancelled_by === "guest" ? "You cancelled this booking." : "We cancelled this booking."}</p>
-      {booking.cancelled_by === "admin" && booking.cancel_reason ? <p>Reason: {booking.cancel_reason}</p> : null}
-      {booking.cancelled_at ? (
-        <p className="text-ink-muted">Cancelled {formatManilaTime(booking.cancelled_at)} (Manila time).</p>
-      ) : null}
-      {booking.refund_status === "none" ? <p>No payment was received, so there is nothing to refund. If you did send GCash, message us and we will refund it.</p> : null}
-      <RefundNote booking={booking} />
-    </Panel>
-  );
 }
 
 function WithCancel({ booking, children }: StatusSectionProps & { children: ReactNode }) {
@@ -172,8 +158,6 @@ export async function StatusSection({ booking }: StatusSectionProps) {
           <Confirmed booking={booking} />
         </WithCancel>
       );
-    case "cancelled":
-      return <Cancelled booking={booking} />;
     case "expired":
       return <Expired booking={booking} />;
     case "rejected":
