@@ -25,11 +25,38 @@ function isPreviewRequest(request: NextRequest): boolean {
   return host.startsWith("client-preview--") || process.env.PREVIEW_MODE === "true";
 }
 
+// TEMP: explains why a preview login failed, with yes/no answers only (never the values). Remove once login works.
+function previewLoginDebug(header: string | null): string {
+  const envUser = process.env.PREVIEW_USER ?? "";
+  const envPass = process.env.PREVIEW_PASSWORD ?? "";
+  const received = header?.startsWith("Basic ") ?? false;
+  let user = "";
+  let pass = "";
+  if (received && header) {
+    try {
+      const decoded = atob(header.slice(6));
+      const colon = decoded.indexOf(":");
+      user = colon === -1 ? decoded : decoded.slice(0, colon);
+      pass = colon === -1 ? "" : decoded.slice(colon + 1);
+    } catch {
+      // leave both empty
+    }
+  }
+  return [
+    `login header received: ${received}`,
+    `username variable set: ${envUser.length > 0}`,
+    `password variable set: ${envPass.length > 0}`,
+    `username matches: ${received && user === envUser}`,
+    `password matches: ${received && pass === envPass}`,
+    `password length typed minus stored: ${received ? pass.length - envPass.length : "n/a"}`,
+  ].join("\n");
+}
+
 function previewGate(request: NextRequest): NextResponse | null {
   if (!isPreviewRequest(request)) return null; // production: gate is off
 
   if (!hasValidPreviewLogin(request.headers.get("authorization"))) {
-    return new NextResponse("Authentication required", {
+    return new NextResponse("Authentication required\n\n" + previewLoginDebug(request.headers.get("authorization")), {
       status: 401,
       headers: { "WWW-Authenticate": 'Basic realm="The Rio preview"' },
     });
