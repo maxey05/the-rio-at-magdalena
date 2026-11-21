@@ -23,7 +23,7 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-function campersText(guests: Pick<GuestCounts, "adults" | "seniors" | "kids">): string {
+export function campersText(guests: Pick<GuestCounts, "adults" | "seniors" | "kids">): string {
   const parts = [
     guests.adults > 0 ? plural(guests.adults, "adult", "adults") : null,
     guests.seniors > 0 ? plural(guests.seniors, "senior", "seniors") : null,
@@ -32,14 +32,14 @@ function campersText(guests: Pick<GuestCounts, "adults" | "seniors" | "kids">): 
   return parts.length > 0 ? parts.join(", ") : "None";
 }
 
-function datesText(booking: Booking): string {
+export function datesText(booking: Booking): string {
   if (booking.kind === "day_tour") {
     return formatDay(booking.check_in);
   }
   return `${short(booking.check_in)} – ${short(addDays(booking.check_in, booking.nights))}`;
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+export function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex justify-between gap-4">
       <dt className="text-earth-muted">{label}</dt>
