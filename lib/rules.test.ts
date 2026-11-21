@@ -442,6 +442,20 @@ describe("validateDetails", () => {
     const result = validateDetails({ name: "", email: "", mobile: "", notes: "", agreeRules: false, agreePrivacy: false });
     assert.deepEqual(Object.keys(result.errors).sort(), ["agreePrivacy", "agreeRules", "email", "mobile", "name"]);
   });
+
+  it("asks plainly for an empty name, email and number", () => {
+    const result = validateDetails({ ...good, name: "  ", email: "", mobile: " " });
+    assert.equal(result.errors.name, "Please enter your name");
+    assert.equal(result.errors.email, "Please enter your email");
+    assert.equal(result.errors.mobile, "Please enter your number");
+  });
+
+  it("keeps the specific messages for filled but invalid values", () => {
+    const result = validateDetails({ ...good, name: "J", email: "nope", mobile: "12345" });
+    assert.match(result.errors.name ?? "", /^Enter your full name/);
+    assert.equal(result.errors.email, "Enter a valid email address.");
+    assert.equal(result.errors.mobile, "Enter a Philippine mobile number like 0917 123 4567.");
+  });
 });
 
 describe("rules.ts purity", () => {
