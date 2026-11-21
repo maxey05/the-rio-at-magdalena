@@ -291,6 +291,18 @@ export function CalendarIcon(props: IconProps) {
   );
 }
 
+export function CalendarCheckIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect width="18" height="16" x="3" y="5" rx="1" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+      <path d="m9 15 2 2 4-4" />
+    </IconBase>
+  );
+}
+
 export function DownloadIcon(props: IconProps) {
   return (
     <IconBase {...props}>
